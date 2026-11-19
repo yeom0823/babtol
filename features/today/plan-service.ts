@@ -1,7 +1,14 @@
 import { getMenu } from "@/features/daycare-menu";
 import { listAvoid } from "@/features/family-settings";
 import { favoriteNamesFor, restingNamesFor } from "@/features/meal-feedback";
-import type { DayPlan, FoodGroup, MealKey, PlanInput } from "@/features/meal-plan";
+import {
+  leftoverSoupOf,
+  type DayPlan,
+  type FoodGroup,
+  type MealKey,
+  type PlanInput,
+} from "@/features/meal-plan";
+import { addDays } from "@/lib/date";
 import {
   PlanError,
   findDishByName,
@@ -46,6 +53,9 @@ export function buildPlan(iso: string, model: PlanModel = gatewayModel): Promise
     const saved = await getPlan(iso);
     if (saved) return saved;
     const plan = await generateDayPlan(await inputFor(iso), model);
+    // 전날 넉넉히 끓인 국은 다음 날 저녁 국 자리에 한 번 이어 쓴다(가정 A8, AC11).
+    const soup = leftoverSoupOf(await getPlan(addDays(iso, -1)));
+    if (soup && plan.dinner) plan.dinner = placeDish(plan.dinner, { ...soup, leftover: true });
     await savePlan(iso, plan);
     return plan;
   })().finally(() => building.delete(iso));

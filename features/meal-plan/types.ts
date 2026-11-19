@@ -18,6 +18,8 @@ export type HomeDish = {
   mainIngredients: string[];
   /** 밥처럼 기본으로 곁들이는 음식. 바꾸기와 레시피가 없다. */
   basic?: boolean;
+  /** 어제 끓인 국을 데워 먹는 메뉴(가정 A8). 장보기에서 재료를 뺀다. */
+  leftover?: boolean;
   recipe: Recipe;
 };
 

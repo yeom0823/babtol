@@ -160,3 +160,19 @@ test("잘 먹음을 누른 메뉴는 추천에서 바뀌어 빠져도 오늘 끼
   await insertFavorite("2026-11-17", "breakfast", "바나나 오트밀", model);
   expect((await loadPlan("2026-11-17"))!.breakfast!.dishes[0].name).toBe("바나나 오트밀");
 });
+
+test("전날 2~3회 분량 국을 끓였으면 다음 날 저녁 국 자리에 어제 끓인 국이 들어간다 (AC11)", async () => {
+  const soup = dish("소고기무국", ["소고기", "무"]);
+  soup.recipe.servings = 3;
+  const rice = dish("밥", ["쌀"]);
+  rice.basic = true;
+  await savePlan("2026-11-16", { dinner: meal(rice, soup, dish("애호박전", ["달걀", "애호박"])) });
+  const { model } = countingModel(() => ({
+    ...fullPlan(),
+    dinner: meal(rice, dish("미역국", ["미역"]), dish("시금치나물", ["시금치"])),
+  }));
+  await buildPlan("2026-11-17", model);
+  const dinner = (await loadPlan("2026-11-17"))!.dinner!.dishes;
+  expect(dinner.map((d) => d.name)).toEqual(["밥", "소고기무국", "시금치나물"]);
+  expect(dinner[1].leftover).toBe(true);
+});

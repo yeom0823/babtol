@@ -67,7 +67,10 @@ export function HomeMealCard({
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-start gap-1.5 rounded-xl bg-primary/8 px-2.5 py-2 text-[13px] text-primary">
           <span>💡</span>
-          <span>{data.why}</span>
+          <span>
+            {data.dishes.some((d) => d.leftover) && "어제 끓인 국이 남아서 오늘은 반찬만 새로 만들면 돼요. "}
+            {data.why}
+          </span>
         </div>
 
         <div className="flex flex-col">
@@ -90,18 +93,37 @@ export function HomeMealCard({
                     🍽️
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {dish.leftover && (
+                      <span>
+                        <Badge variant="secondary" className="bg-primary/12 text-primary">
+                          ♻️ 어제 저녁에 끓인 국
+                        </Badge>
+                      </span>
+                    )}
                     <span className="text-base font-bold">{dish.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {dish.recipe.minutes}분{dish.groups.length ? ` · ${dish.groups.join(", ")}` : ""}
+                      {dish.leftover ? "데우기만 하면 돼요" : `${dish.recipe.minutes}분`}
+                      {dish.groups.length ? ` · ${dish.groups.join(", ")}` : ""}
                     </span>
-                    {dish.recipe.servings > 1 && /국|찌개|탕/.test(dish.name) && meal === "dinner" && (
+                    {!dish.leftover && dish.recipe.servings > 1 && /(국|찌개|탕)$/.test(dish.name) && meal === "dinner" && (
                       <span className="text-xs text-primary">♻️ 넉넉히 끓이면 내일 저녁엔 데우기만 해요</span>
                     )}
-                    <div className="flex gap-1.5">
-                      <Button variant="outline" size="sm" onClick={() => setRecipe(dish)}>
-                        📖 레시피
-                      </Button>
-                      {swappable && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {dish.leftover ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={pending}
+                          onClick={() => run(`dish-${index}`, () => actions.swapDish(iso, meal, index))}
+                        >
+                          {busy === `dish-${index}` ? <Spinner data-icon="inline-start" /> : "🍲"} 다 먹었어요, 새로 고르기
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => setRecipe(dish)}>
+                          📖 레시피
+                        </Button>
+                      )}
+                      {swappable && !dish.leftover && (
                         <Button
                           variant="ghost"
                           size="sm"

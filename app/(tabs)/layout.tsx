@@ -1,8 +1,8 @@
 import { BottomTabBar, type TabItem } from "@/components/bottom-tab-bar";
 
-// 탭은 화면이 생기는 대로 하나씩 늘린다.
 const TABS: TabItem[] = [
   { href: "/", label: "오늘", icon: "🍚" },
+  { href: "/shop", label: "장보기", icon: "🛒" },
   { href: "/favs", label: "잘 먹은 메뉴", icon: "😋" },
 ];
 
