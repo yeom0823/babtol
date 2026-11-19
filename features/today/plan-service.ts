@@ -1,4 +1,4 @@
-import { getMenu } from "@/features/daycare-menu";
+import { getMenu } from "@/features/daycare-menu/server";
 import { listAvoid } from "@/features/family-settings";
 import { favoriteNamesFor, restingNamesFor } from "@/features/meal-feedback";
 import {

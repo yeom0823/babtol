@@ -1,39 +1,19 @@
-import { generateText } from "ai";
 import { z } from "zod";
+
+import { gatewayModel, type JsonModel } from "@/lib/llm";
 
 import { mainIngredientsOf } from "./food-groups";
 import { dayCoverage } from "./day-coverage";
-import { extractJson } from "./extract-json";
 import { MEAL_KO, SYSTEM, buildPrompt, mealsFor, type PlanInput } from "./prompt";
 import { mealSchema } from "./schema";
 import type { DayPlan, MealKey } from "./types";
 import { findViolations } from "./violations";
 
-/** AI Gateway의 무료 텍스트 모델. 모델 ID와 무료 여부는 작업할 때 모델 목록에서 다시 확인한다. */
-export const MODEL_ID = "nvidia/nemotron-3.5-lightning-free";
+export { gatewayModel };
 
 export class PlanError extends Error {}
 
-export type PlanModel = (prompt: {
-  system: string;
-  user: string;
-  schema?: z.ZodType;
-}) => Promise<unknown>;
-
-/**
- * 무료 모델은 게이트웨이가 JSON 스키마를 강제하지 않는다(responseFormat 미지원). 그래서 프롬프트의 예시로
- * 형식을 알려 주고, 답에서 JSON을 꺼내 우리 스키마로 직접 검증한다. 인증은 Vercel OIDC 토큰이 맡는다.
- */
-export const gatewayModel: PlanModel = async ({ system, user }) => {
-  const { text } = await generateText({
-    model: MODEL_ID,
-    system,
-    prompt: user,
-    abortSignal: AbortSignal.timeout(170_000),
-    maxRetries: 1,
-  });
-  return extractJson(text);
-};
+export type PlanModel = JsonModel;
 
 const MAX_ATTEMPTS = 3;
 
@@ -73,7 +53,6 @@ async function generateMeals(
     const raw = await model({
       system: SYSTEM,
       user: buildPrompt(input, meals, feedback, keepNames, hint),
-      schema,
     }).catch(() => null);
     const parsed = schema.safeParse(raw);
     if (!parsed.success) {

@@ -1,4 +1,4 @@
-import { getMenus, saveMenus } from "@/features/daycare-menu";
+import { getMenus, saveMenus } from "@/features/daycare-menu/server";
 import { KidsnoteAuthError, fetchMenus, getSession, markExpired } from "@/features/kidsnote";
 import { addDays, weekOf } from "@/lib/date";
 import { readStore, updateStore } from "@/lib/local-store";

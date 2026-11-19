@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { saveMenus } from "@/features/daycare-menu";
+import { saveMenus } from "@/features/daycare-menu/server";
 import type { DayPlan, HomeDish } from "@/features/meal-plan";
 import type { PlanModel } from "@/features/meal-plan/server";
 

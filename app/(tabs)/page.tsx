@@ -3,7 +3,7 @@ import { SettingsIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
-import { getMenus } from "@/features/daycare-menu";
+import { getMenus } from "@/features/daycare-menu/server";
 import { syncDaycareMenus } from "@/features/daycare-sync";
 import { connectionStatus } from "@/features/kidsnote";
 import { dayCoverage, type MealKey } from "@/features/meal-plan";

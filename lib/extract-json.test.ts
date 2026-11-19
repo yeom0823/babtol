@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { extractJson } from "./extract-json";
+import { extractJson } from "@/lib/extract-json";
 
 test("앞뒤에 설명이 붙은 답에서 JSON 객체를 꺼낸다", () => {
   expect(extractJson('여기 있어요:\n{"a": 1, "b": {"c": 2}}\n맛있게 드세요')).toEqual({ a: 1, b: { c: 2 } });

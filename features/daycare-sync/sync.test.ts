@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { getMenu, saveMenus } from "@/features/daycare-menu";
+import { getMenu, saveMenus } from "@/features/daycare-menu/server";
 import { connectionStatus, connectWithPassword } from "@/features/kidsnote";
 
 import { syncDaycareMenus } from "./sync";
