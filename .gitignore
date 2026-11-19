@@ -50,3 +50,6 @@ next-env.d.ts
 
 # worktree
 .claude/worktrees
+
+# 로컬 앱 데이터(아이 정보, 키즈노트 세션)
+/.data/
