@@ -43,6 +43,8 @@ export async function readMenusFromText(
   const raw = await model({
     system: SYSTEM,
     user: `기준 날짜(오늘): ${today}\n\n식단표에서 읽은 글:\n${text.slice(0, 8000)}`,
+    // 여러 날의 식단을 한 번에 돌려줘서 답이 길다.
+    timeoutMs: 60_000,
   }).catch(() => null);
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return [];
