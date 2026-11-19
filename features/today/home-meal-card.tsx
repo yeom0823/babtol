@@ -10,6 +10,7 @@ import type { FeedbackValue } from "@/features/meal-feedback";
 import type { HomeDish, HomeMeal, MealKey } from "@/features/meal-plan";
 import { cn } from "@/lib/utils";
 
+import { DishPicture } from "./dish-picture";
 import { FeedbackButtons } from "./feedback-buttons";
 import { RecipeSheet } from "./recipe-sheet";
 
@@ -37,12 +38,15 @@ export function HomeMealCard({
   meal,
   data,
   feedback,
+  photos,
   actions,
 }: {
   iso: string;
   meal: MealKey;
   data: HomeMeal;
   feedback: Record<string, FeedbackValue>;
+  /** 메뉴 이름 → 사진 주소. 없으면 사진 자리를 비운 기본 모양을 보여 준다. */
+  photos: Record<string, string | null>;
   actions: PlanActions;
 }) {
   const [pending, startTransition] = useTransition();
@@ -61,10 +65,14 @@ export function HomeMealCard({
   };
 
   const swappable = data.dishes.filter((d) => !d.basic).length > 1;
+  // 대표 사진은 사진이 있는 첫 메뉴, 없으면 첫 메뉴(기본 모양).
+  const mains = data.dishes.filter((d) => !d.basic);
+  const hero = mains.find((d) => photos[d.name]) ?? mains[0];
 
   return (
     <Card className={cn(pending && "opacity-60 transition-opacity")} aria-busy={pending}>
       <CardContent className="flex flex-col gap-3">
+        <DishPicture src={hero ? photos[hero.name] : null} name={hero?.name} className="h-[170px] w-full rounded-[18px] text-6xl" />
         <div className="flex items-start gap-1.5 rounded-xl bg-primary/8 px-2.5 py-2 text-[13px] text-primary">
           <span>💡</span>
           <span>
@@ -86,12 +94,7 @@ export function HomeMealCard({
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
-                  <div
-                    aria-hidden="true"
-                    className="grid size-[60px] flex-none place-items-center rounded-2xl bg-muted text-2xl opacity-80"
-                  >
-                    🍽️
-                  </div>
+                  <DishPicture src={photos[dish.name]} className="size-[60px] flex-none rounded-2xl text-2xl" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     {dish.leftover && (
                       <span>

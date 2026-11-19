@@ -22,6 +22,7 @@ import {
 } from "@/features/today";
 import { loadPlan } from "@/features/today/server";
 import { getFeedbackFor } from "@/features/meal-feedback";
+import { photoFor } from "@/features/dish-photo";
 import { toISODate, weekOf } from "@/lib/date";
 
 import {
@@ -47,13 +48,17 @@ export default async function TodayPage(props: PageProps<"/">) {
   const { label, relative, note } = describeDay(selected, today);
 
   const feedback = await getFeedbackFor(selected);
+  const dishNames = [
+    ...new Set(Object.values(plan ?? {}).flatMap((m) => m?.dishes.filter((d) => !d.basic).map((d) => d.name) ?? [])),
+  ];
+  const photos = Object.fromEntries(await Promise.all(dishNames.map(async (n) => [n, await photoFor(n)] as const)));
   const actions = { swapDish: swapDishAction, swapMeal: swapMealAction, setFeedback: setFeedbackAction };
   const homeMeal = (meal: MealKey, title: string, sub: string) => {
     const data = plan?.[meal];
     return (
       <MealSlide who="home" title={title} sub={sub}>
         {data ? (
-          <HomeMealCard iso={selected} meal={meal} data={data} feedback={feedback} actions={actions} />
+          <HomeMealCard iso={selected} meal={meal} data={data} feedback={feedback} photos={photos} actions={actions} />
         ) : (
           <PlanSkeleton />
         )}
