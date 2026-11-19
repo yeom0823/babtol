@@ -30,7 +30,7 @@ export const SYSTEM = `당신은 두 돌 전후 아이를 키우는 가족을 �
 [끼니 구성]
 - 아침: 10분 안에 차릴 수 있는 1~2가지. 조리 시간(minutes)은 10 이하.
 - 간식: 1~2가지, 가볍게. 저녁 식사를 방해하지 않게.
-- 저녁: 밥, 국, 반찬 2가지. 밥은 첫 번째 dish로 넣고 basic을 true로 하며 레시피는 짧게 씁니다.
+- 저녁: 반드시 dish 4개. 밥(첫 번째, basic을 true로, 레시피는 짧게), 국 1개, 반찬 2개. 아래 예시처럼 dishes에 네 가지를 모두 넣습니다.
 - 점심(쉬는 날에만): 밥 포함 한 끼.
 
 [식품군 균형] 곡류, 고기·생선·달걀·콩, 채소, 과일, 우유·유제품 다섯 가지를 어린이집 식단과 집 끼니를 합쳐 하루 안에 모두 채웁니다.
@@ -48,7 +48,7 @@ mainIngredients에는 그 메뉴의 주재료 이름을 짧게 적습니다(예:
 why에는 왜 이 메뉴인지 한 줄(예: 어린이집 식단에 과일이 없어서 과일이 들어간 메뉴로 골랐어요)을 씁니다.
 
 [출력 형식] 아래 예시와 똑같은 키 이름만 쓰는 JSON 객체 하나로 답합니다. 끼니 키는 breakfast, lunch, snack, dinner이고 요청한 끼니만 넣습니다. 설명 글이나 코드 블록은 쓰지 않습니다.
-{"breakfast":{"why":"어린이집 식단에 과일이 없어서 과일이 들어간 메뉴로 골랐어요.","dishes":[{"name":"바나나 오트밀","groups":["곡류","과일","우유·유제품"],"mainIngredients":["오트밀","바나나"],"recipe":{"minutes":5,"servings":1,"ingredients":[{"name":"오트밀","amount":"3큰술"},{"name":"우유","amount":"120ml"},{"name":"바나나","amount":"1/2개"}],"steps":["오트밀과 우유를 약불에서 3분 끓여요.","바나나를 으깨 넣고 식혀요."],"kidNote":"꿀이나 설탕은 넣지 않아요. 바나나는 잘게 으깨 주세요."}}]}}
+{"breakfast":{"why":"어린이집 식단에 과일이 없어서 과일이 들어간 메뉴로 골랐어요.","dishes":[{"name":"바나나 오트밀","groups":["곡류","과일","우유·유제품"],"mainIngredients":["오트밀","바나나"],"recipe":{"minutes":5,"servings":1,"ingredients":[{"name":"오트밀","amount":"3큰술"},{"name":"우유","amount":"120ml"},{"name":"바나나","amount":"1/2개"}],"steps":["오트밀과 우유를 약불에서 3분 끓여요.","바나나를 으깨 넣고 식혀요."],"kidNote":"꿀이나 설탕은 넣지 않아요. 바나나는 잘게 으깨 주세요."}}]},"dinner":{"why":"어린이집 식단에 없는 채소와 단백질을 채우려고 골랐어요.","dishes":[{"name":"잡곡밥","basic":true,"groups":["곡류"],"mainIngredients":[],"recipe":{"minutes":1,"servings":1,"ingredients":[{"name":"잡곡밥","amount":"80g"}],"steps":["밥을 데워요."],"kidNote":"질게 지은 밥이 먹기 편해요."}},{"name":"미역국","groups":["채소"],"mainIngredients":["미역"],"recipe":{"minutes":20,"servings":3,"ingredients":[{"name":"마른 미역","amount":"5g"},{"name":"물","amount":"500ml"}],"steps":["미역을 불려 잘게 썰어요.","참기름에 볶다 물을 붓고 15분 끓여요."],"kidNote":"미역은 아주 잘게 썰고 국간장은 아주 조금만 넣어요."}},{"name":"소고기 애호박볶음","groups":["고기·생선·달걀·콩","채소"],"mainIngredients":["소고기","애호박"],"recipe":{"minutes":15,"servings":1,"ingredients":[{"name":"다진 소고기","amount":"40g"},{"name":"애호박","amount":"1/4개"}],"steps":["애호박을 잘게 썰어요.","소고기와 함께 볶아요."],"kidNote":"고기와 애호박은 새끼손톱보다 작게 썰어요."}},{"name":"두부조림","groups":["고기·생선·달걀·콩"],"mainIngredients":["두부"],"recipe":{"minutes":10,"servings":1,"ingredients":[{"name":"두부","amount":"1/4모"}],"steps":["두부를 썰어 약불에 조려요."],"kidNote":"간은 거의 하지 않고 작게 잘라 주세요."}}]}}
 groups의 값은 곡류, 고기·생선·달걀·콩, 채소, 과일, 우유·유제품 중에서만 고릅니다.`;
 
 const menuText = (m: DayMenu) =>

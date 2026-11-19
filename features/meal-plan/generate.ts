@@ -15,7 +15,8 @@ export class PlanError extends Error {}
 
 export type PlanModel = JsonModel;
 
-const MAX_ATTEMPTS = 3;
+// 추론을 끈 모델은 한 번에 5~6초라 재시도를 넉넉히 둔다. JSON 형식이 어긋나는 답이 절반쯤 된다.
+const MAX_ATTEMPTS = 5;
 
 function daycareText(input: PlanInput): string {
   const d = input.daycare;
