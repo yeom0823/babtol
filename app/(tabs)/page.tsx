@@ -3,7 +3,10 @@ import { SettingsIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getMenus } from "@/features/daycare-menu";
+import { syncDaycareMenus } from "@/features/daycare-sync";
+import { connectionStatus } from "@/features/kidsnote";
 import {
   DaycareLunch,
   MealCarousel,
@@ -21,6 +24,8 @@ export default async function TodayPage(props: PageProps<"/">) {
   const { d } = await props.searchParams;
   const today = toISODate(new Date());
   const selected = typeof d === "string" && ISO_DATE.test(d) ? d : today;
+  await syncDaycareMenus(today);
+  const status = await connectionStatus();
   const menus = await getMenus(weekOf(selected));
   const menu = menus[selected] ?? null;
   const kind = dayKind(selected, menu);
@@ -75,6 +80,23 @@ export default async function TodayPage(props: PageProps<"/">) {
         today={today}
         withMenu={new Set(Object.keys(menus))}
       />
+
+      {status === "expired" && (
+        <Alert variant="destructive" role="alert">
+          <AlertTitle>키즈노트 연결이 끊겼어요</AlertTitle>
+          <AlertDescription>
+            다시 연결하면 오늘 어린이집 식단을 가져와서 추천해 드려요.
+          </AlertDescription>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Link href="/settings/kidsnote" className={buttonVariants({ size: "sm" })}>
+              다시 연결하기
+            </Link>
+            <Link href="/upload" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              📷 식단표 사진으로 올리기
+            </Link>
+          </div>
+        </Alert>
+      )}
 
       {note && (
         <div className="flex items-center gap-1.5 rounded-xl bg-muted px-3 py-2 text-[13px] text-muted-foreground">

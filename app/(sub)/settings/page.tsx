@@ -4,8 +4,16 @@ import { ChevronRightIcon } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { connectionStatus } from "@/features/kidsnote";
 
-export default function SettingsPage() {
+const KIDSNOTE_NOTE = {
+  connected: "연결됨 · 매일 자동으로 가져와요",
+  expired: "연결이 끊겼어요 · 눌러서 다시 연결해 주세요",
+  none: "연결하면 식단을 매일 자동으로 가져와요",
+} as const;
+
+export default async function SettingsPage() {
+  const status = await connectionStatus();
   return (
     <>
       <BackLink href="/">오늘</BackLink>
@@ -15,6 +23,14 @@ export default function SettingsPage() {
         <h2 className="text-[15px] font-bold">어린이집 식단 가져오기</h2>
         <Card>
           <CardContent>
+            <Item render={<Link href="/settings/kidsnote" />}>
+              <ItemMedia variant="icon">🏫</ItemMedia>
+              <ItemContent>
+                <ItemTitle>키즈노트</ItemTitle>
+                <ItemDescription>{KIDSNOTE_NOTE[status]}</ItemDescription>
+              </ItemContent>
+              <ChevronRightIcon className="text-muted-foreground" />
+            </Item>
             <Item render={<Link href="/upload" />}>
               <ItemMedia variant="icon">📷</ItemMedia>
               <ItemContent>
