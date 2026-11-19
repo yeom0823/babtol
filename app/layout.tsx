@@ -16,8 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "집 끼니",
-  description: "어린이집 식단과 겹치지 않고 하루 식품군을 채우는 집 끼니 추천",
+  title: "밥톨",
+  description:
+    "어린이집 식단을 바탕으로, 겹치지 않으면서 하루 다섯 식품군을 채우는 집 아침·간식·저녁을 레시피와 함께 추천해 주는 아이 끼니 도우미",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
