@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { gatewayModel, type JsonModel } from "@/lib/llm";
+import { ModelBusyError, gatewayModel, type JsonModel } from "@/lib/llm";
 
 import { mainIngredientsOf } from "./food-groups";
 import { dayCoverage } from "./day-coverage";
@@ -13,10 +13,13 @@ export { gatewayModel };
 
 export class PlanError extends Error {}
 
+/** AI 호출 한도에 걸려 지금은 만들 수 없다. 1분쯤 뒤에 다시 하면 된다. */
+export class PlanBusyError extends PlanError {}
+
 export type PlanModel = JsonModel;
 
-// 추론을 끈 모델은 한 번에 5~6초라 재시도를 넉넉히 둔다. JSON 형식이 어긋나는 답이 절반쯤 된다.
-const MAX_ATTEMPTS = 5;
+// JSON 모드로 받아 형식 실패는 드물다. 재시도는 대부분 규칙 위반 때문이고, 한도(분당 5회)를 아끼려고 4번까지만 한다.
+const MAX_ATTEMPTS = 4;
 
 function daycareText(input: PlanInput): string {
   const d = input.daycare;
@@ -49,13 +52,22 @@ async function generateMeals(
 
   let feedback: string[] = [];
   let lastHard: string[] = [];
-  let candidate: DayPlan | null = null;
+  let candidate: { plan: DayPlan; missing: number } | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const raw = await model({
-      system: SYSTEM,
-      user: buildPrompt(input, meals, feedback, keepNames, hint),
-    }).catch(() => null);
+    const t0 = Date.now();
+    let raw: unknown = null;
+    try {
+      raw = await model({ system: SYSTEM, user: buildPrompt(input, meals, feedback, keepNames, hint) });
+    } catch (e) {
+      // 한도에 걸리면 1분 동안은 다시 불러도 실패만 쌓인다. 남은 시도를 쓰지 않고 바로 멈춘다.
+      if (e instanceof ModelBusyError) {
+        if (candidate) return candidate.plan;
+        throw new PlanBusyError("지금 AI 사용량이 많아요");
+      }
+      console.info(`[meal-plan] attempt ${attempt} call error:`, e instanceof Error ? e.message : e);
+    }
     const parsed = schema.safeParse(raw);
+    console.info(`[meal-plan] attempt ${attempt} ${meals.join(",")} ${Date.now() - t0}ms ${parsed.success ? "parsed" : "invalid"}`);
     if (!parsed.success) {
       feedback = ["JSON 형식이 지정한 구조와 달랐어요. 모든 끼니의 why와 dishes, 레시피 필드를 채워 주세요."];
       continue;
@@ -65,20 +77,23 @@ async function generateMeals(
       (v) => `${MEAL_KO[v.meal]} ${v.dish}: ${v.detail}`
     );
     if (hard.length) {
+      console.info(`[meal-plan] attempt ${attempt} violations:`, hard.join(" | "));
       feedback = hard;
       lastHard = hard;
       continue;
     }
-    candidate = plan;
     lastHard = [];
     // 식품군은 하루 전체를 만들 때만 따진다.
     if (keep || meals.length < 3) return plan;
     const { missing } = dayCoverage(plan, input.daycare);
     if (!missing.length) return plan;
+    // 식품군 보완은 한 번만 다시 받는다. 빈 칸은 화면의 "채우기"로도 메울 수 있다(AC15는 95% 기준).
+    if (candidate) return missing.length < candidate.missing ? plan : candidate.plan;
+    candidate = { plan, missing: missing.length };
     feedback = [`식품군 ${missing.join(", ")}이(가) 하루 안에 비었어요. 집 끼니에서 채워 주세요.`];
   }
   // 규칙을 지킨 추천이 한 번이라도 있었으면, 식품군을 채우려던 뒤 시도가 실패해도 그 추천을 쓴다.
-  if (candidate) return candidate;
+  if (candidate) return candidate.plan;
   throw new PlanError(lastHard.length ? `규칙을 지키는 추천을 만들지 못했어요: ${lastHard[0]}` : "추천을 만들지 못했어요");
 }
 

@@ -15,14 +15,14 @@ import { FeedbackButtons } from "./feedback-buttons";
 import { RecipeSheet } from "./recipe-sheet";
 
 export type PlanActions = {
-  swapDish: (iso: string, meal: MealKey, index: number) => Promise<{ ok: boolean }>;
-  swapMeal: (iso: string, meal: MealKey) => Promise<{ ok: boolean }>;
+  swapDish: (iso: string, meal: MealKey, index: number) => Promise<{ ok: boolean; busy?: boolean }>;
+  swapMeal: (iso: string, meal: MealKey) => Promise<{ ok: boolean; busy?: boolean }>;
   setFeedback: (
     iso: string,
     meal: MealKey,
     name: string,
     value: FeedbackValue | null
-  ) => Promise<{ ok: boolean }>;
+  ) => Promise<{ ok: boolean; busy?: boolean }>;
 };
 
 const SWAP_ALL_LABEL: Record<MealKey, string> = {
@@ -51,15 +51,15 @@ export function HomeMealCard({
 }) {
   const [pending, startTransition] = useTransition();
   const [busy, setBusy] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [failed, setFailed] = useState<"busy" | "error" | null>(null);
   const [recipe, setRecipe] = useState<HomeDish | null>(null);
 
-  const run = (key: string, job: () => Promise<{ ok: boolean }>) => {
-    setFailed(false);
+  const run = (key: string, job: () => Promise<{ ok: boolean; busy?: boolean }>) => {
+    setFailed(null);
     setBusy(key);
     startTransition(async () => {
       const result = await job();
-      if (!result.ok) setFailed(true);
+      if (!result.ok) setFailed(result.busy ? "busy" : "error");
       setBusy(null);
     });
   };
@@ -158,7 +158,9 @@ export function HomeMealCard({
 
         {failed && (
           <p role="alert" className="m-0 text-[13px] text-destructive">
-            지금은 바꾸지 못했어요. 잠시 뒤에 다시 눌러 주세요.
+            {failed === "busy"
+              ? "지금 AI 사용량이 많아요. 1분쯤 뒤에 다시 눌러 주세요."
+              : "지금은 바꾸지 못했어요. 다시 눌러 주세요."}
           </p>
         )}
 

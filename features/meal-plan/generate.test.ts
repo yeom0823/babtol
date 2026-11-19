@@ -1,6 +1,8 @@
 import { expect, test } from "vitest";
 
-import { PlanError, generateDayPlan, type PlanModel } from "./generate";
+import { ModelBusyError } from "@/lib/llm";
+
+import { PlanBusyError, PlanError, generateDayPlan, type PlanModel } from "./generate";
 import type { PlanInput } from "./prompt";
 import type { DayPlan, HomeDish } from "./types";
 
@@ -116,4 +118,14 @@ test("식품군이 빈 유효한 추천이 있으면, 다시 받다가 규칙을
   };
   const plan = await generateDayPlan(input, model);
   expect(plan.breakfast?.dishes[0].name).toBe("달걀 토스트");
+});
+
+test("AI 호출 한도에 걸리면 남은 시도를 쓰지 않고 바로 멈춘다", async () => {
+  let calls = 0;
+  const model: PlanModel = async () => {
+    calls++;
+    throw new ModelBusyError("rate limit");
+  };
+  await expect(generateDayPlan(input, model)).rejects.toBeInstanceOf(PlanBusyError);
+  expect(calls).toBe(1);
 });

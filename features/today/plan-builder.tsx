@@ -16,17 +16,17 @@ export function PlanBuilder({
   build,
 }: {
   iso: string;
-  build: (iso: string) => Promise<{ ok: boolean }>;
+  build: (iso: string) => Promise<{ ok: boolean; busy?: boolean }>;
 }) {
   const router = useRouter();
-  const [state, setState] = useState<"building" | "failed">("building");
+  const [state, setState] = useState<"building" | "failed" | "busy">("building");
   const started = useRef<string | null>(null);
 
   const start = () => {
     setState("building");
     build(iso).then((result) => {
       if (result.ok) router.refresh();
-      else setState("failed");
+      else setState(result.busy ? "busy" : "failed");
     });
   };
 
@@ -44,7 +44,7 @@ export function PlanBuilder({
         role="status"
         className="m-0 flex items-center gap-2 text-[13px] text-muted-foreground"
       >
-        <Spinner /> 어린이집 식단을 보고 고르는 중이에요. 1분쯤 걸릴 수 있어요.
+        <Spinner /> 어린이집 식단을 보고 고르는 중이에요. 10초쯤 걸려요.
       </p>
     );
   }
@@ -52,7 +52,7 @@ export function PlanBuilder({
     <Alert variant="destructive" role="alert">
       <AlertTitle>지금은 추천을 만들 수 없어요</AlertTitle>
       <AlertDescription>
-        잠깐 사용량이 많아요. 1분쯤 뒤에 다시 눌러 주세요. 어린이집 식단은 아래에서 볼 수 있어요.
+        {state === "busy" ? "지금 AI 사용량이 많아요. 1분쯤 뒤에 다시 눌러 주세요." : "잠깐 문제가 생겼어요. 다시 눌러 주세요."} 어린이집 식단은 아래에서 볼 수 있어요.
       </AlertDescription>
       <div className="mt-2">
         <Button size="sm" onClick={start}>

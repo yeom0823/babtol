@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { releaseResting, setFeedback, type FeedbackValue } from "@/features/meal-feedback";
 import { FOOD_GROUPS, type FoodGroup, type MealKey } from "@/features/meal-plan";
+import { PlanBusyError } from "@/features/meal-plan/server";
 import {
   buildPlan,
   fillGroup,
@@ -14,7 +15,8 @@ import {
 } from "@/features/today/server";
 import { toISODate } from "@/lib/date";
 
-export type ActionResult = { ok: boolean };
+/** busy: AI 호출 한도에 걸려 1분쯤 뒤에 다시 하면 된다. */
+export type ActionResult = { ok: boolean; busy?: boolean };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MEALS: MealKey[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -28,7 +30,7 @@ async function run(iso: string, job: () => Promise<unknown>): Promise<ActionResu
     return { ok: true };
   } catch (e) {
     console.error("추천 작업 실패:", e instanceof Error ? e.message : e);
-    return { ok: false };
+    return { ok: false, busy: e instanceof PlanBusyError };
   }
 }
 
