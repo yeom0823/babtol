@@ -98,3 +98,19 @@ test("쉬는 날은 점심도 집 끼니로 받는다", async () => {
   expect(lunchAsked).toBe(true);
   expect(plan.lunch?.dishes[0].name).toBe("소고기 채소죽");
 });
+
+test("식품군이 빈 유효한 추천이 있으면, 다시 받다가 규칙을 어겨도 그 추천을 내보낸다", async () => {
+  const noFruit = okPlan();
+  noFruit.breakfast = meal(dish("달걀 토스트", { recipe: { ...dish("x").recipe, ingredients: withIngredients(["식빵", "달걀"]) } }));
+  noFruit.snack = meal(dish("고구마", { recipe: { ...dish("x").recipe, ingredients: withIngredients(["고구마"]) } }));
+  let n = 0;
+  const model: PlanModel = async () => {
+    n++;
+    if (n === 1) return noFruit;
+    const bad = okPlan();
+    bad.dinner = meal(dish("땅콩죽"));
+    return bad;
+  };
+  const plan = await generateDayPlan(input, model);
+  expect(plan.breakfast?.dishes[0].name).toBe("달걀 토스트");
+});

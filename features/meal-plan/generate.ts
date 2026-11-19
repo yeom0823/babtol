@@ -76,7 +76,8 @@ async function generateMeals(
     if (!missing.length) return plan;
     feedback = [`식품군 ${missing.join(", ")}이(가) 하루 안에 비었어요. 집 끼니에서 채워 주세요.`];
   }
-  if (candidate && !lastHard.length) return candidate;
+  // 규칙을 지킨 추천이 한 번이라도 있었으면, 식품군을 채우려던 뒤 시도가 실패해도 그 추천을 쓴다.
+  if (candidate) return candidate;
   throw new PlanError(lastHard.length ? `규칙을 지키는 추천을 만들지 못했어요: ${lastHard[0]}` : "추천을 만들지 못했어요");
 }
 
