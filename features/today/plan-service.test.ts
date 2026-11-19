@@ -1,0 +1,114 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, beforeEach, expect, test } from "vitest";
+
+import { saveMenus } from "@/features/daycare-menu";
+import type { DayPlan, HomeDish } from "@/features/meal-plan";
+import type { PlanModel } from "@/features/meal-plan/server";
+
+import { buildPlan, fillGroup, loadPlan, swapDish, swapMeal } from "./plan-service";
+
+let dir: string;
+beforeEach(async () => {
+  dir = await mkdtemp(join(tmpdir(), "plan-service-"));
+  process.env.HOME_MEAL_DATA_FILE = join(dir, "data.json");
+  await saveMenus(
+    { "2026-11-17": { lunch: ["잡곡밥", "두부장국"], morningSnack: [], afternoonSnack: [] } },
+    "upload"
+  );
+});
+afterEach(async () => {
+  delete process.env.HOME_MEAL_DATA_FILE;
+  await rm(dir, { recursive: true, force: true });
+});
+
+const dish = (name: string, ingredients: string[]): HomeDish => ({
+  name,
+  groups: [],
+  mainIngredients: [],
+  recipe: {
+    minutes: 5,
+    servings: 1,
+    ingredients: ingredients.map((n) => ({ name: n, amount: "약간" })),
+    steps: ["만들어요."],
+    kidNote: "잘게 주세요.",
+  },
+});
+const meal = (...d: HomeDish[]) => ({ why: "골랐어요.", dishes: d });
+const fullPlan = (tag = ""): DayPlan => ({
+  breakfast: meal(dish(`바나나 오트밀${tag}`, ["오트밀", "우유", "바나나"])),
+  snack: meal(dish(`귤${tag}`, ["귤"])),
+  dinner: meal(dish(`애호박전${tag}`, ["달걀", "애호박"])),
+});
+
+function countingModel(make: (n: number, user: string) => unknown) {
+  const calls: string[] = [];
+  const model: PlanModel = async ({ user }) => {
+    calls.push(user);
+    return make(calls.length, user);
+  };
+  return { model, calls };
+}
+
+test("만든 추천은 저장되어 같은 날을 다시 열어도 모델을 부르지 않는다 (A10)", async () => {
+  const { model, calls } = countingModel(() => fullPlan());
+  await buildPlan("2026-11-17", model);
+  expect((await loadPlan("2026-11-17"))?.breakfast?.dishes[0].name).toBe("바나나 오트밀");
+  await buildPlan("2026-11-17", model);
+  expect(calls).toHaveLength(1);
+});
+
+test("같은 날짜를 동시에 만들어도 모델은 한 번만 부른다", async () => {
+  const { model, calls } = countingModel(() => fullPlan());
+  await Promise.all([buildPlan("2026-11-17", model), buildPlan("2026-11-17", model)]);
+  expect(calls).toHaveLength(1);
+});
+
+test("어린이집 식단을 모델에 알려 준다", async () => {
+  const { model, calls } = countingModel(() => fullPlan());
+  await buildPlan("2026-11-17", model);
+  expect(calls[0]).toContain("두부장국");
+});
+
+test("다른 아침 보기는 아침만 바꾸고 나머지 끼니는 그대로 둔다 (AC6)", async () => {
+  const { model } = countingModel((n) =>
+    n === 1 ? fullPlan() : { breakfast: meal(dish("달걀 치즈 토스트", ["식빵", "달걀", "치즈"])) }
+  );
+  await buildPlan("2026-11-17", model);
+  await swapMeal("2026-11-17", "breakfast", model);
+  const plan = (await loadPlan("2026-11-17"))!;
+  expect(plan.breakfast?.dishes[0].name).toBe("달걀 치즈 토스트");
+  expect(plan.snack?.dishes[0].name).toBe("귤");
+  expect(plan.dinner?.dishes[0].name).toBe("애호박전");
+});
+
+test("이것만 바꾸기는 그 메뉴 하나만 바꾼다 (AC6)", async () => {
+  const dinner = meal(dish("밥", ["쌀"]), dish("소고기무국", ["소고기", "무"]), dish("애호박전", ["달걀", "애호박"]));
+  dinner.dishes[0].basic = true;
+  const { model } = countingModel((n) =>
+    n === 1
+      ? { ...fullPlan(), dinner }
+      : { dinner: meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("달걀찜", ["달걀"])) }
+  );
+  await buildPlan("2026-11-17", model);
+  await swapDish("2026-11-17", "dinner", 1, model);
+  const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
+  expect(names).toEqual(["밥", "미역국", "애호박전"]);
+});
+
+test("빈 식품군 채우기는 그 식품군이 들어간 끼니로 바꾼다 (AC13)", async () => {
+  const noFruit: DayPlan = {
+    breakfast: meal(dish("달걀 토스트", ["식빵", "달걀", "우유"])),
+    snack: meal(dish("고구마", ["고구마"])),
+    dinner: meal(dish("애호박전", ["달걀", "애호박"])),
+  };
+  const { model, calls } = countingModel((n) =>
+    n === 1 ? noFruit : { snack: meal(dish("바나나", ["바나나"])) }
+  );
+  await buildPlan("2026-11-17", model);
+  await fillGroup("2026-11-17", "과일", model);
+  expect((await loadPlan("2026-11-17"))!.snack!.dishes[0].name).toBe("바나나");
+  expect(calls[1]).toContain("과일");
+});

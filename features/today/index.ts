@@ -1,7 +1,12 @@
+export { DayFoodGroups } from "./day-food-groups";
 export { DaycareLunch } from "./daycare-lunch";
 export { dayKind, type DayKind } from "./day-kind";
 export { describeDay } from "./describe-day";
+export { HomeMealCard, type PlanActions } from "./home-meal-card";
 export { MealCarousel, type CarouselSlide } from "./meal-carousel";
 export { MealSlide } from "./meal-slide";
 export type { Meal } from "./meal-time";
+export { PlanBuilder } from "./plan-builder";
+export { PlanSkeleton } from "./plan-skeleton";
+export { buildPlan, fillGroup, loadPlan, swapDish, swapMeal } from "./plan-service";
 export { WeekDatePicker } from "./week-date-picker";
