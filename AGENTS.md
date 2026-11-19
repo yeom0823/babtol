@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+<!-- BEGIN:stack-context ai-sdk -->
+## AI SDK · AI Gateway 최신 문서
+
+AI 기능(`ai` 패키지, `@ai-sdk/*`, Vercel AI Gateway)을 만들거나 고치기 전에 `ai-sdk` 스킬을 먼저 따른다. 설치된 버전에 맞춘 문서는 `node_modules/ai/docs/`와 `node_modules/@ai-sdk/<name>/docs/`에 있다. 거기에 없는 내용은 작업을 시작할 때 https://ai-sdk.dev/llms.txt 와 https://vercel.com/docs/ai-gateway 를 새로 읽는다. 원격 문서와 설치된 버전이 다르면 설치된 버전을 따르고, 그 차이를 작업 보고에 적는다. 모델 ID와 무료 제공 여부는 기억에 의존하지 말고 AI Gateway 모델 목록에서 확인한다.
+<!-- END:stack-context ai-sdk -->
+
 # 아키텍처 핵심 원칙
 
 모든 구조 판단은 아래 5가지를 기준으로 한다.

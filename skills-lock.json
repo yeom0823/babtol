@@ -8,6 +8,14 @@
       "computedHash": "675fa06c75ff768956f7143723409a33588d6203d01091b458c7b604ce008fe2",
       "installMode": "copy"
     },
+    "ai-sdk": {
+      "source": "vercel/ai",
+      "commit": "04a8f3837e7cf350358f2a084507445ab3e15f11",
+      "sourceType": "github",
+      "skillPath": "skills/ai-sdk/SKILL.md",
+      "computedHash": "59cd2dc82c5458f2819992fc3d27204ed16edfc9170870c6f8f04c44bac17772",
+      "installMode": "copy"
+    },
     "audit-evals": {
       "source": "toy-crane/skills",
       "sourceType": "github",
