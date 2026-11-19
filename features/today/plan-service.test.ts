@@ -8,7 +8,19 @@ import { saveMenus } from "@/features/daycare-menu";
 import type { DayPlan, HomeDish } from "@/features/meal-plan";
 import type { PlanModel } from "@/features/meal-plan/server";
 
-import { buildPlan, fillGroup, loadPlan, swapDish, swapMeal } from "./plan-service";
+import { addAvoid } from "@/features/family-settings";
+import { setFeedback } from "@/features/meal-feedback";
+import { savePlan } from "@/features/meal-plan/server";
+
+import {
+  buildPlan,
+  fillGroup,
+  insertFavorite,
+  loadPlan,
+  rememberDish,
+  swapDish,
+  swapMeal,
+} from "./plan-service";
 
 let dir: string;
 beforeEach(async () => {
@@ -111,4 +123,40 @@ test("빈 식품군 채우기는 그 식품군이 들어간 끼니로 바꾼다 
   await fillGroup("2026-11-17", "과일", model);
   expect((await loadPlan("2026-11-17"))!.snack!.dishes[0].name).toBe("바나나");
   expect(calls[1]).toContain("과일");
+});
+
+test("피할 음식, 잠깐 쉬는 메뉴, 잘 먹은 메뉴를 모델에 알려 준다 (AC16)", async () => {
+  await addAvoid("땅콩, 새우");
+  await setFeedback({ date: "2026-11-10", meal: "dinner", name: "시금치나물", value: "남김" });
+  await setFeedback({ date: "2026-11-09", meal: "breakfast", name: "바나나 오트밀", value: "잘 먹음" });
+  const { model, calls } = countingModel(() => fullPlan());
+  await buildPlan("2026-11-17", model);
+  expect(calls[0]).toContain("땅콩, 새우");
+  expect(calls[0]).toContain("시금치나물");
+  expect(calls[0]).toContain("바나나 오트밀");
+});
+
+test("잘 먹은 메뉴를 오늘 그 끼니의 해당 칸에 넣는다 (AC9)", async () => {
+  const soup = dish("소고기무국", ["소고기", "무"]);
+  soup.recipe.steps = ["끓여요."];
+  await savePlan("2026-11-12", {
+    dinner: meal(soup),
+  });
+  const dinner = meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("애호박전", ["달걀", "애호박"]));
+  dinner.dishes[0].basic = true;
+  const { model } = countingModel(() => ({ ...fullPlan(), dinner }));
+  await insertFavorite("2026-11-17", "dinner", "소고기무국", model);
+  const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
+  expect(names).toEqual(["밥", "소고기무국", "애호박전"]);
+});
+
+test("잘 먹음을 누른 메뉴는 추천에서 바뀌어 빠져도 오늘 끼니에 넣을 수 있다 (AC9)", async () => {
+  const { model } = countingModel((n) =>
+    n === 1 ? fullPlan() : { breakfast: meal(dish("달걀 치즈 토스트", ["식빵", "달걀", "치즈"])) }
+  );
+  await buildPlan("2026-11-17", model);
+  await rememberDish("2026-11-17", "바나나 오트밀");
+  await swapMeal("2026-11-17", "breakfast", model);
+  await insertFavorite("2026-11-17", "breakfast", "바나나 오트밀", model);
+  expect((await loadPlan("2026-11-17"))!.breakfast!.dishes[0].name).toBe("바나나 오트밀");
 });

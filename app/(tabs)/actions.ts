@@ -2,8 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 
+import { releaseResting, setFeedback, type FeedbackValue } from "@/features/meal-feedback";
 import { FOOD_GROUPS, type FoodGroup, type MealKey } from "@/features/meal-plan";
-import { buildPlan, fillGroup, swapDish, swapMeal } from "@/features/today";
+import {
+  buildPlan,
+  fillGroup,
+  insertFavorite,
+  rememberDish,
+  swapDish,
+  swapMeal,
+} from "@/features/today/server";
+import { toISODate } from "@/lib/date";
 
 export type ActionResult = { ok: boolean };
 
@@ -40,4 +49,38 @@ export async function swapDishAction(iso: string, meal: MealKey, index: number):
 export async function fillGroupAction(iso: string, group: FoodGroup): Promise<ActionResult> {
   if (!FOOD_GROUPS.includes(group)) return { ok: false };
   return run(iso, () => fillGroup(iso, group));
+}
+
+const VALUES: FeedbackValue[] = ["잘 먹음", "보통", "남김"];
+
+/** 먹은 결과 한 번 누르기. value가 null이면 취소한다. */
+export async function setFeedbackAction(
+  iso: string,
+  meal: MealKey,
+  name: string,
+  value: FeedbackValue | null
+): Promise<ActionResult> {
+  if (!MEALS.includes(meal) || !name || (value !== null && !VALUES.includes(value))) return { ok: false };
+  return run(iso, async () => {
+    await setFeedback({ date: iso, meal, name, value });
+    if (value === "잘 먹음") await rememberDish(iso, name);
+  });
+}
+
+/** 잘 먹은 메뉴를 오늘 그 끼니에 넣는다(AC9). */
+export async function insertFavoriteAction(meal: MealKey, name: string): Promise<ActionResult> {
+  if (!MEALS.includes(meal) || !name) return { ok: false };
+  const today = toISODate(new Date());
+  const result = await run(today, () => insertFavorite(today, meal, name));
+  revalidatePath("/favs");
+  return result;
+}
+
+/** 잠깐 쉬는 메뉴를 다시 추천받게 되돌린다(AC8). */
+export async function releaseRestingAction(name: string): Promise<ActionResult> {
+  if (!name) return { ok: false };
+  await releaseResting(name);
+  revalidatePath("/favs");
+  revalidatePath("/");
+  return { ok: true };
 }

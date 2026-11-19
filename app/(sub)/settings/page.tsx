@@ -4,6 +4,7 @@ import { ChevronRightIcon } from "lucide-react";
 import { BackLink } from "@/components/back-link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { listAvoid } from "@/features/family-settings";
 import { connectionStatus } from "@/features/kidsnote";
 
 const KIDSNOTE_NOTE = {
@@ -14,6 +15,7 @@ const KIDSNOTE_NOTE = {
 
 export default async function SettingsPage() {
   const status = await connectionStatus();
+  const avoid = await listAvoid();
   return (
     <>
       <BackLink href="/">오늘</BackLink>
@@ -36,6 +38,30 @@ export default async function SettingsPage() {
               <ItemContent>
                 <ItemTitle>식단표 올리기</ItemTitle>
                 <ItemDescription>키즈노트 없이 식단을 직접 올려요</ItemDescription>
+              </ItemContent>
+              <ChevronRightIcon className="text-muted-foreground" />
+            </Item>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className="text-[15px] font-bold">추천에서 뺄 음식</h2>
+        <Card>
+          <CardContent>
+            <Item render={<Link href="/avoid" />}>
+              <ItemMedia variant="icon">🚫</ItemMedia>
+              <ItemContent>
+                <ItemTitle>피할 음식</ItemTitle>
+                <ItemDescription>{avoid.length ? avoid.join(", ") : "아직 없어요"}</ItemDescription>
+              </ItemContent>
+              <ChevronRightIcon className="text-muted-foreground" />
+            </Item>
+            <Item render={<Link href="/favs" />}>
+              <ItemMedia variant="icon">😣</ItemMedia>
+              <ItemContent>
+                <ItemTitle>잠깐 쉬는 메뉴</ItemTitle>
+                <ItemDescription>&quot;남김&quot;을 누른 메뉴는 2주 동안 빼요</ItemDescription>
               </ItemContent>
               <ChevronRightIcon className="text-muted-foreground" />
             </Item>

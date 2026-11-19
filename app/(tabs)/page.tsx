@@ -18,14 +18,16 @@ import {
   WeekDatePicker,
   dayKind,
   describeDay,
-  loadPlan,
   type CarouselSlide,
 } from "@/features/today";
+import { loadPlan } from "@/features/today/server";
+import { getFeedbackFor } from "@/features/meal-feedback";
 import { toISODate, weekOf } from "@/lib/date";
 
 import {
   buildPlanAction,
   fillGroupAction,
+  setFeedbackAction,
   swapDishAction,
   swapMealAction,
 } from "./actions";
@@ -44,13 +46,14 @@ export default async function TodayPage(props: PageProps<"/">) {
   const plan = await loadPlan(selected);
   const { label, relative, note } = describeDay(selected, today);
 
-  const actions = { swapDish: swapDishAction, swapMeal: swapMealAction };
+  const feedback = await getFeedbackFor(selected);
+  const actions = { swapDish: swapDishAction, swapMeal: swapMealAction, setFeedback: setFeedbackAction };
   const homeMeal = (meal: MealKey, title: string, sub: string) => {
     const data = plan?.[meal];
     return (
       <MealSlide who="home" title={title} sub={sub}>
         {data ? (
-          <HomeMealCard iso={selected} meal={meal} data={data} actions={actions} />
+          <HomeMealCard iso={selected} meal={meal} data={data} feedback={feedback} actions={actions} />
         ) : (
           <PlanSkeleton />
         )}

@@ -6,14 +6,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import type { FeedbackValue } from "@/features/meal-feedback";
 import type { HomeDish, HomeMeal, MealKey } from "@/features/meal-plan";
 import { cn } from "@/lib/utils";
 
+import { FeedbackButtons } from "./feedback-buttons";
 import { RecipeSheet } from "./recipe-sheet";
 
 export type PlanActions = {
   swapDish: (iso: string, meal: MealKey, index: number) => Promise<{ ok: boolean }>;
   swapMeal: (iso: string, meal: MealKey) => Promise<{ ok: boolean }>;
+  setFeedback: (
+    iso: string,
+    meal: MealKey,
+    name: string,
+    value: FeedbackValue | null
+  ) => Promise<{ ok: boolean }>;
 };
 
 const SWAP_ALL_LABEL: Record<MealKey, string> = {
@@ -28,11 +36,13 @@ export function HomeMealCard({
   iso,
   meal,
   data,
+  feedback,
   actions,
 }: {
   iso: string;
   meal: MealKey;
   data: HomeMeal;
+  feedback: Record<string, FeedbackValue>;
   actions: PlanActions;
 }) {
   const [pending, startTransition] = useTransition();
@@ -106,9 +116,20 @@ export function HomeMealCard({
                   </div>
                 </div>
               )}
+              {!dish.basic && (
+                <FeedbackButtons
+                  iso={iso}
+                  meal={meal}
+                  name={dish.name}
+                  initial={feedback[dish.name] ?? null}
+                  save={actions.setFeedback}
+                />
+              )}
             </div>
           ))}
         </div>
+
+        <span className="text-xs text-muted-foreground">먹여 봤다면 반응을 눌러 주세요. 안 눌러도 괜찮아요.</span>
 
         {failed && (
           <p role="alert" className="m-0 text-[13px] text-destructive">

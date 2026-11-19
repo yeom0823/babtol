@@ -1,10 +1,15 @@
 import { getMenu } from "@/features/daycare-menu";
+import { listAvoid } from "@/features/family-settings";
+import { favoriteNamesFor, restingNamesFor } from "@/features/meal-feedback";
 import type { DayPlan, FoodGroup, MealKey, PlanInput } from "@/features/meal-plan";
 import {
   PlanError,
+  findDishByName,
   gatewayModel,
   generateDayPlan,
   getPlan,
+  keepDish,
+  placeDish,
   regenerateMeal,
   savePlan,
   type PlanModel,
@@ -20,9 +25,9 @@ async function inputFor(iso: string): Promise<PlanInput> {
     kind,
     // 쉬는 날은 어린이집 식단을 쓰지 않는다.
     daycare: kind === "off" ? null : menu,
-    avoid: [],
-    resting: [],
-    favorites: [],
+    avoid: await listAvoid(),
+    resting: await restingNamesFor(iso),
+    favorites: await favoriteNamesFor(iso),
   };
 }
 
@@ -102,4 +107,28 @@ export async function fillGroup(iso: string, group: FoodGroup, model: PlanModel 
   const meal = FILL_MEAL[group] === "breakfast" || plan[FILL_MEAL[group]] ? FILL_MEAL[group] : "dinner";
   const hint = `이 끼니에 ${group} 식품군이 들어간 메뉴를 넣어 주세요. 기존 메뉴(${names(plan, meal).join(", ")})는 필요하면 바꿔도 됩니다.`;
   await savePlan(iso, await regenerateMeal(await inputFor(iso), meal, plan, model, hint));
+}
+
+/** 잘 먹은 메뉴를 그날 그 끼니의 해당 칸에 넣는다(AC9). 추천이 없으면 먼저 만든다. */
+export async function insertFavorite(
+  iso: string,
+  meal: MealKey,
+  name: string,
+  model: PlanModel = gatewayModel
+) {
+  const plan = await buildPlan(iso, model);
+  const dish = await findDishByName(name);
+  if (!dish) throw new PlanError("그 메뉴의 레시피를 찾지 못했어요");
+  const current = plan[meal];
+  if (!current) throw new PlanError("그 끼니는 이날 집에서 먹지 않아요");
+  await savePlan(iso, { ...plan, [meal]: placeDish(current, dish) });
+}
+
+/** 그날 추천에 있던 메뉴의 레시피를 기억해 둔다. 잘 먹음을 누를 때 쓴다. */
+export async function rememberDish(iso: string, name: string): Promise<void> {
+  const plan = await getPlan(iso);
+  const dish = Object.values(plan ?? {})
+    .flatMap((m) => m?.dishes ?? [])
+    .find((d) => d.name === name);
+  if (dish) await keepDish(dish);
 }
