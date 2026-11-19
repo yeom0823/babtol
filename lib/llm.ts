@@ -1,7 +1,11 @@
 import { Output, generateText } from "ai";
 
-/** AI Gateway의 무료 텍스트 모델. 모델 ID와 무료 여부는 작업할 때 모델 목록에서 다시 확인한다. */
-export const MODEL_ID = "nvidia/nemotron-3.5-lightning-free";
+/**
+ * 기본은 AI Gateway의 무료 텍스트 모델이다. 유료 크레딧을 충전했으면 AI_MODEL 환경 변수로
+ * 유료 모델(예: anthropic/claude-haiku-5.5)을 지정한다. 무료 모델은 팀 전체 분당 5회 한도가 있다.
+ * 모델 ID와 가격은 작업할 때 모델 목록(https://ai-gateway.vercel.sh/v1/models)에서 다시 확인한다.
+ */
+export const MODEL_ID = process.env.AI_MODEL?.trim() || "nvidia/nemotron-3.5-lightning-free";
 
 /** 시스템 지시와 요청을 받아 모델 답의 JSON을 돌려준다. 테스트에서는 가짜로 바꿔 끼운다. */
 export type JsonModel = (prompt: { system: string; user: string; timeoutMs?: number }) => Promise<unknown>;
