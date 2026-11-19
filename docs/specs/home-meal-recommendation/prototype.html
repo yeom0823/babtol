@@ -1,0 +1,1534 @@
+<!--
+  prototype shell: the review chrome every prototype starts from.
+
+  Keep this comment in the prototype you grow from here: it is the contract,
+  and later turns work from that file rather than from this one.
+
+  Contract (extend product screens; keep the review shell):
+  - Product:  .sh-stage contains only end-user product UI. Keep review notes,
+               rationale, instructions, and approval controls in conversation.
+  - Screens:  <section data-screen="slug" data-title="Label"> inside .sh-stage.
+               The selector, arrow keys, and #hash routing build themselves.
+               Use one option per product destination or distinct surface,
+               named by its product role. Keep baselines, variants, comparison
+               labels, steps, indexes, and progress out of names and states.
+               Links may use href="#slug".
+  - States:   "Default" is automatic. A screen declares only representative
+               presets in data-states="Empty,Error". Use natural, screen-specific
+               names. Reserve presets for important multi-step results, forced
+               data or errors, or materially different structure; keep one-click
+               and transient states as interactions. Use data-when="Empty" on
+               preset-only elements. Call prototypeShell.setState("Name") on
+               entry and setState("Default") on exit, including when repeated
+               actions cross a preset condition.
+  - Viewport: "vp (m)" cycles full / 390 / 768. The 390 preset is a
+               fixed-height, internally scrolling phone frame. Start a
+               mobile-first prototype by adding class="sh-vp-390" to <body>
+               (or a bootstrap classList.add before the chrome script runs).
+  - Pinning:  keep in-frame bars (tab bars, CTAs) inside the phone with
+               position: sticky; position: fixed pins to the browser window.
+  - Tokens:   replace the project-tokens block with project tokens copied
+               verbatim. Map differing names to --background, --foreground, and
+               --font afterwards; replace network fonts with a system stack and
+               note that substitution. Without a design system, keep this
+               palette as the finished style. When the project ships dark
+               tokens, copy them under .sh-theme-dark, which the shell sets
+               on both the root element and body, so :root.sh-theme-dark and
+               body.sh-theme-dark work too. A .dark class or a
+               prefers-color-scheme media query copied verbatim would follow
+               the reviewer's system instead of the toggle.
+  - Theme:    the light / dark switch (t) changes the product surface only.
+               It appears only when a .sh-theme-dark rule declares dark tokens,
+               so a prototype without them carries no theme control. Prototypes
+               always load light; the review bar keeps its own dark styling in
+               both themes so it still reads as chrome.
+  - Placeholders: .wf-pic stands in for pictures the prototype has no real
+               files for. Use real text everywhere text belongs.
+
+  - Chrome:   Keep exactly the screen selector, selected-screen state selector,
+               viewport cycle, and theme toggle.
+
+  Self-contained by design: no build, no framework, no network.
+-->
+<meta charset="utf-8">
+<title>Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ── project tokens: copied verbatim from app/globals.css ── */
+  :root {
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.147 0.004 49.3);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.147 0.004 49.3);
+    --primary: oklch(0.555 0.163 48.998);
+    --primary-foreground: oklch(0.987 0.022 95.277);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.96 0.002 17.2);
+    --muted-foreground: oklch(0.547 0.021 43.1);
+    --accent: oklch(0.96 0.002 17.2);
+    --accent-foreground: oklch(0.214 0.009 43.1);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0.005 34.3);
+    --input: oklch(0.922 0.005 34.3);
+    --ring: oklch(0.714 0.014 41.2);
+    --radius: 0.875rem;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.147 0.004 49.3);
+    /* DM Sans / Noto Serif are network fonts: substituted with system stacks */
+    --font: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    --font-heading: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  }
+  .sh-theme-dark {
+    --background: oklch(0.147 0.004 49.3);
+    --foreground: oklch(0.986 0.002 67.8);
+    --card: oklch(0.214 0.009 43.1);
+    --card-foreground: oklch(0.986 0.002 67.8);
+    --popover: oklch(0.214 0.009 43.1);
+    --popover-foreground: oklch(0.986 0.002 67.8);
+    --primary: oklch(0.473 0.137 46.201);
+    --primary-foreground: oklch(0.987 0.022 95.277);
+    --secondary: oklch(0.274 0.006 286.033);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.268 0.011 36.5);
+    --muted-foreground: oklch(0.714 0.014 41.2);
+    --accent: oklch(0.268 0.011 36.5);
+    --accent-foreground: oklch(0.986 0.002 67.8);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.547 0.021 43.1);
+  }
+
+  /* ── review chrome (sh-*): keep; extend product styles elsewhere ── */
+  * { box-sizing: border-box }
+  body {
+    margin: 0; padding: 0 0 40px;
+    background: var(--background, #f6f6f6); color: var(--foreground, #3a3a3a);
+    font-family: var(--font, system-ui, sans-serif);
+  }
+  .sh-bar {
+    position: sticky; top: 0; z-index: 999;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 8px 12px; background: #191a1c; color: #d7d7d7;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .sh-bar b, .sh-control-label { color: #8a8f98; font-weight: 500 }
+  .sh-control { display: inline-flex; gap: 5px; align-items: center }
+  .sh-bar button {
+    border: 1px solid #3a3d42; background: none; color: inherit;
+    font: inherit; padding: 2px 9px; border-radius: 99px; cursor: pointer;
+  }
+  .sh-bar select {
+    width: 170px; border: 1px solid #3a3d42; background: #232428; color: inherit;
+    font: inherit; padding: 3px 28px 3px 9px; border-radius: 7px; cursor: pointer;
+    color-scheme: dark;
+  }
+  #sh-screen { width: 190px }
+  .sh-bar button.on { background: #d7d7d7; color: #191a1c; border-color: #d7d7d7 }
+  .sh-theme { display: inline-flex; border: 1px solid #3a3d42; border-radius: 99px; overflow: hidden }
+  .sh-theme button { border: 0; border-radius: 0; padding: 2px 10px }
+  .sh-spacer { flex: 1 }
+  .sh-stage { max-width: 960px; margin: 0 auto; padding: 12px 16px 0 }
+  [hidden] { display: none !important }
+
+  /* viewport presets */
+  .sh-vp-390 .sh-stage {
+    max-width: 390px; background: var(--background, #f6f6f6);
+    border: 10px solid #191a1c; border-radius: 28px;
+    padding: 16px 12px; height: min(844px, calc(100dvh - 52px));
+    overflow-y: auto; margin-top: 12px;
+  }
+  .sh-vp-768 .sh-stage {
+    max-width: 768px; border: 1px solid #c4c4c4; border-radius: 12px;
+    padding: 16px; margin-top: 12px;
+  }
+
+  /* placeholders */
+  .wf-pic  { border-radius: 4px; background:
+             repeating-linear-gradient(45deg, #e9e9e9, #e9e9e9 6px, #f2f2f2 6px, #f2f2f2 12px) }
+  .sh-theme-dark .wf-pic { background: repeating-linear-gradient(45deg,
+             color-mix(in srgb, var(--foreground) 16%, transparent) 0 6px,
+             color-mix(in srgb, var(--foreground) 8%, transparent) 6px 12px) }
+
+  /* ── product styles (shadcn-like, token driven) ── */
+  .app { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; font-size: 15px; line-height: 1.5 }
+  .app h1, .app h2, .app h3 { font-family: var(--font-heading); margin: 0; font-weight: 700; letter-spacing: -0.02em }
+  .app { letter-spacing: -0.01em }
+  .app h1 { font-size: 22px }
+  .app h2 { font-size: 17px }
+  .app h3 { font-size: 15px }
+  .muted { color: var(--muted-foreground) }
+  .small { font-size: 13px }
+  .xs { font-size: 12px }
+  .row { display: flex; align-items: center; gap: 8px }
+  .between { justify-content: space-between }
+  .col { display: flex; flex-direction: column }
+  .gap-1 { gap: 4px } .gap-2 { gap: 8px } .gap-3 { gap: 12px } .gap-4 { gap: 16px }
+  .wrap { flex-wrap: wrap }
+  .grow { flex: 1; min-width: 0 }
+
+  .card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border);
+          border-radius: calc(var(--radius) * 1.4); padding: 16px; display: flex; flex-direction: column; gap: 12px }
+  .card-header { display: flex; flex-direction: column; gap: 2px }
+  .card-muted { background: var(--muted); border-color: transparent }
+
+  .btn { appearance: none; border: 1px solid transparent; border-radius: var(--radius); font: inherit; font-size: 14px; font-weight: 500;
+         height: 36px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;
+         background: var(--primary); color: var(--primary-foreground); white-space: nowrap }
+  .btn:focus-visible { outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent) }
+  .btn-lg { height: 44px; font-size: 15px; width: 100% }
+  .btn-outline { background: var(--background); color: var(--foreground); border-color: var(--border) }
+  .btn-ghost { background: transparent; color: var(--foreground) }
+  .btn-ghost:hover, .btn-outline:hover { background: var(--accent) }
+  .btn-sm { height: 30px; padding: 0 10px; font-size: 13px; border-radius: calc(var(--radius) * 0.8) }
+  .btn-icon { width: 36px; padding: 0 }
+  .btn[disabled] { opacity: .5; cursor: default }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 99px; font-size: 12px; font-weight: 500;
+           background: var(--secondary); color: var(--secondary-foreground); white-space: nowrap }
+  .badge-outline { background: transparent; border: 1px solid var(--border); color: var(--muted-foreground) }
+  .badge-primary { background: color-mix(in oklch, var(--primary) 14%, transparent); color: var(--primary) }
+
+  .alert { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 10px; background: var(--card) }
+  .alert-destructive { color: var(--destructive); border-color: color-mix(in oklch, var(--destructive) 30%, transparent) }
+  .alert-destructive .alert-desc { color: color-mix(in oklch, var(--destructive) 85%, var(--foreground)) }
+  .alert-title { font-weight: 600; font-size: 14px }
+  .alert-desc { font-size: 13px; color: var(--muted-foreground) }
+  .alert svg { flex: none; margin-top: 2px }
+
+  .sep { height: 1px; background: var(--border); border: 0; margin: 0 }
+
+  .field { display: flex; flex-direction: column; gap: 6px }
+  .field label { font-size: 14px; font-weight: 500 }
+  .field-desc { font-size: 12px; color: var(--muted-foreground) }
+  .input { height: 44px; border: 1px solid var(--input); border-radius: var(--radius); padding: 0 12px; font: inherit; font-size: 16px; background: transparent; color: var(--foreground); width: 100% }
+  .input:focus { outline: 3px solid color-mix(in oklch, var(--ring) 50%, transparent); border-color: var(--ring) }
+  .field[data-invalid] .input { border-color: var(--destructive) }
+  .field[data-invalid] .field-desc { color: var(--destructive) }
+  .otp { display: flex; gap: 8px; justify-content: center }
+  .otp input { width: 44px; height: 52px; text-align: center; font-size: 20px; border: 1px solid var(--input); border-radius: var(--radius); background: transparent; color: var(--foreground) }
+
+  .skeleton { background: var(--muted); border-radius: calc(var(--radius) * 0.6); animation: pulse 1.6s ease-in-out infinite }
+  @keyframes pulse { 50% { opacity: .5 } }
+  .spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; display: inline-block }
+  @keyframes spin { to { transform: rotate(360deg) } }
+
+  /* app header */
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: oklch(0.65 0.15 150); display: inline-block }
+  .status-dot.off { background: var(--destructive) }
+
+  /* daycare menu */
+  .meal-line { display: grid; grid-template-columns: 64px 1fr; gap: 8px; font-size: 14px }
+  .meal-line dt { color: var(--muted-foreground) }
+  .meal-line dd { margin: 0 }
+  .ing { color: var(--primary); font-weight: 500 }
+
+  /* food group balance */
+  .groups { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px }
+  .group { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: var(--radius);
+           background: var(--muted); text-align: center; font-size: 12px; line-height: 1.3 }
+  .group .mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--background); border: 1px dashed var(--muted-foreground); color: var(--muted-foreground) }
+  .group.full { background: color-mix(in oklch, var(--primary) 12%, var(--background)) }
+  .group.full .mark { background: var(--primary); border: 0; color: var(--primary-foreground) }
+  .group .src { color: var(--muted-foreground); font-size: 11px }
+
+  /* recommendation */
+  .dish { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 }
+  .dish + .dish { border-top: 1px solid var(--border) }
+  .dish-name { font-weight: 600; font-size: 15px }
+  .reason { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted-foreground); background: var(--muted); padding: 8px 10px; border-radius: calc(var(--radius) * 0.8) }
+
+  .toggle-group { display: inline-flex; border: 1px solid var(--border); border-radius: calc(var(--radius) * 0.8); overflow: hidden }
+  .toggle-group button { border: 0; background: transparent; font: inherit; font-size: 13px; height: 32px; padding: 0 12px; color: var(--foreground); cursor: pointer }
+  .toggle-group button + button { border-left: 1px solid var(--border) }
+  .toggle-group button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); font-weight: 600 }
+
+  /* sheet */
+  .sheet-overlay { position: fixed; inset: 0; background: oklch(0 0 0 / 40%); z-index: 50; display: flex; align-items: flex-end; justify-content: center }
+  .sh-vp-390 .sh-stage, .sh-vp-768 .sh-stage { position: relative }
+  .sheet { background: var(--popover); color: var(--popover-foreground); width: 100%; max-width: 560px; max-height: 86%;
+           overflow-y: auto; border-radius: calc(var(--radius) * 1.8) calc(var(--radius) * 1.8) 0 0; padding: 20px 18px 28px;
+           display: flex; flex-direction: column; gap: 14px }
+  ol.steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px }
+  ul.ings { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; font-size: 14px }
+  ul.ings li { display: contents }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px 0 12px; border-radius: 99px; border: 1px solid var(--border); font-size: 14px; background: var(--card) }
+  .chip button { border: 0; background: transparent; cursor: pointer; width: 22px; height: 22px; border-radius: 50%; color: var(--muted-foreground); display: grid; place-items: center }
+  .chip button:hover { background: var(--accent) }
+
+  .empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 20px 12px }
+  .empty-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--muted); display: grid; place-items: center; color: var(--muted-foreground) }
+
+  .disclaimer { font-size: 12px; color: var(--muted-foreground); text-align: center; padding: 4px 8px 8px }
+  .toast { position: sticky; bottom: 12px; margin: 0 auto; width: fit-content; background: var(--foreground); color: var(--background); padding: 8px 14px; border-radius: 99px; font-size: 13px; z-index: 40 }
+  a { color: inherit }
+
+  /* ── timeline today (chosen direction B) ── */
+  .app { word-break: keep-all; overflow-wrap: break-word }
+  .btn { border-radius: 99px }
+  .btn-soft { background: color-mix(in oklch, var(--primary) 12%, var(--background)); color: var(--primary); font-weight: 600 }
+  .btn-soft:hover { background: color-mix(in oklch, var(--primary) 18%, var(--background)) }
+  .btn-block { width: 100% }
+
+  .pic { position: relative; overflow: hidden; display: grid; place-items: center; flex: none; width: 60px; height: 60px; border-radius: 14px;
+         background: radial-gradient(circle at 50% 55%, oklch(0.99 0.01 80) 0 38%, oklch(0.93 0.03 70) 39% 46%, transparent 47%),
+                     linear-gradient(135deg, oklch(0.86 0.06 60), oklch(0.78 0.08 45)); }
+  .pic::after { content: attr(data-food); font-size: var(--emoji, 26px) }
+  .pic.t2 { background: radial-gradient(circle at 50% 55%, oklch(0.99 0.01 80) 0 38%, oklch(0.93 0.03 70) 39% 46%, transparent 47%), linear-gradient(135deg, oklch(0.84 0.06 140), oklch(0.74 0.08 150)) }
+  .pic.t3 { background: radial-gradient(circle at 50% 55%, oklch(0.99 0.01 80) 0 38%, oklch(0.93 0.03 70) 39% 46%, transparent 47%), linear-gradient(135deg, oklch(0.85 0.05 240), oklch(0.75 0.06 250)) }
+  .pic.none { background: var(--muted) }
+  .pic.none::after { content: "🍽️"; opacity: .45 }
+
+  .day-head { display: flex; align-items: center; justify-content: space-between; gap: 12px }
+  .day-head h1 { font-size: 26px; line-height: 1.2 }
+  .ring { --p: 100; width: 64px; height: 64px; border-radius: 50%; flex: none; display: grid; place-items: center; border: 0; padding: 0; cursor: default;
+          background: conic-gradient(var(--primary) calc(var(--p) * 1%), var(--muted) 0) }
+  .ring span { width: 50px; height: 50px; border-radius: 50%; background: var(--background); display: grid; place-items: center; font-size: 14px; font-weight: 700; line-height: 1.1; text-align: center; color: var(--foreground) }
+  .fg-chips { display: flex; flex-wrap: wrap; gap: 6px }
+  .fg { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--muted); color: var(--muted-foreground); display: inline-flex; gap: 4px; align-items: center }
+  .fg.on { background: color-mix(in oklch, var(--primary) 14%, var(--background)); color: var(--primary); font-weight: 600 }
+  .fg.on::before { content: "✓" }
+  .quick { display: flex; gap: 6px; flex-wrap: wrap }
+  .quick a { text-decoration: none }
+
+  .tl { position: relative; display: flex; flex-direction: column; padding-left: 24px }
+  .tl::before { content: ""; position: absolute; left: 7px; top: 10px; bottom: 10px; width: 2px; background: var(--border) }
+  .step { position: relative; padding-bottom: 20px }
+  .step:last-child { padding-bottom: 0 }
+  .step::before { content: ""; position: absolute; left: -23px; top: 5px; width: 14px; height: 14px; border-radius: 50%; background: var(--background); border: 2px solid var(--border) }
+  .step.home::before { background: var(--primary); border-color: var(--primary) }
+  .when { font-size: 13px; color: var(--muted-foreground); display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+  .who { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 99px; background: var(--muted); color: var(--muted-foreground) }
+  .home .who { background: var(--primary); color: var(--primary-foreground) }
+  .now { font-size: 12px; font-weight: 700; color: var(--primary) }
+  .meal { margin-top: 8px; border-radius: calc(var(--radius) * 1.4); padding: 14px; display: flex; flex-direction: column; gap: 12px;
+          background: var(--card); border: 1px solid var(--border); box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 10px 28px -14px oklch(0 0 0 / 0.16) }
+  .meal.is-now { border-color: color-mix(in oklch, var(--primary) 45%, var(--border)) }
+  .why { font-size: 13px; color: var(--primary); background: color-mix(in oklch, var(--primary) 8%, var(--background)); padding: 8px 10px; border-radius: 10px; display: flex; gap: 6px }
+  .dishrow { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border) }
+  .dishrow:first-of-type { border-top: 0; padding-top: 0 }
+  .dish-top { display: flex; gap: 12px; align-items: center }
+  .dish-name { font-weight: 700; font-size: 16px }
+  .dish-actions { display: flex; gap: 6px; flex: none }
+  .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--foreground); display: grid; place-items: center; cursor: pointer; font-size: 15px }
+  .icon-btn:hover { background: var(--accent) }
+  .fb { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
+  .fb button { border: 1px solid var(--border); background: var(--background); color: var(--foreground); border-radius: 99px; height: 36px; font: inherit; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px }
+  .fb button[aria-pressed="true"] { background: var(--foreground); color: var(--background); border-color: var(--foreground); font-weight: 700 }
+  .fb-label { font-size: 12px; color: var(--muted-foreground) }
+  .swapping { opacity: .35; transition: opacity .15s }
+
+  .dc { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; background: var(--muted); border-radius: calc(var(--radius) * 1.4); padding: 12px 14px }
+  .dc-line { display: grid; grid-template-columns: 58px 1fr; gap: 8px; font-size: 14px }
+  .dc-line dt { color: var(--muted-foreground); font-size: 13px }
+  .dc-line dd { margin: 0 }
+  .dc-photos { display: flex; gap: 6px }
+  .dc-photos .pic { width: 46px; height: 46px; border-radius: 10px; --emoji: 20px }
+  .avoided { color: var(--primary); font-weight: 600 }
+
+  /* ── one meal per slide (swipe) ── */
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; background: var(--muted); border-radius: 99px; position: sticky; top: -16px; z-index: 5 }
+  .tabs button { border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; height: 36px; border-radius: 99px; color: var(--muted-foreground); cursor: pointer; position: relative }
+  .tabs button[aria-selected="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 1px 3px oklch(0 0 0 / 0.12) }
+  .tabs button.is-now::after { content: "지금"; position: absolute; top: -6px; right: 8px; font-size: 10px; font-weight: 700; background: var(--primary); color: var(--primary-foreground); padding: 0 6px; border-radius: 99px; line-height: 16px }
+  .slides { align-items: flex-start; transition: height .2s; overflow-y: hidden; display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -12px; overscroll-behavior-x: contain }
+  .slides::-webkit-scrollbar { display: none }
+  .slide { flex: 0 0 100%; scroll-snap-align: center; padding: 2px 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0 }
+  .slide-head { display: flex; align-items: center; gap: 8px }
+  .slide-head h2 { font-size: 26px }
+  .who { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; background: var(--muted); color: var(--muted-foreground) }
+  .home-who { background: var(--primary); color: var(--primary-foreground) }
+  .now-tag { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--primary) }
+  .now-tag::before { content: "● " }
+  .sub { font-size: 13px; color: var(--muted-foreground); margin-top: -4px }
+  .meal { margin-top: 0 }
+  .pic.hero { width: 100%; height: 170px; border-radius: 18px; --emoji: 64px }
+  .dots { display: flex; justify-content: center; gap: 6px }
+  .dots span { width: 6px; height: 6px; border-radius: 99px; background: var(--border); transition: width .2s }
+  .dots span.on { width: 18px; background: var(--primary) }
+
+  /* ── date picker (week strip) ── */
+  .week { display: flex; align-items: center; gap: 2px }
+  .week .icon-btn { width: 30px; height: 30px; border: 0; font-size: 18px; flex: none }
+  .week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; flex: 1; min-width: 0 }
+  .day { border: 0; background: transparent; font: inherit; color: var(--foreground); cursor: pointer; border-radius: 14px; padding: 5px 0 6px;
+         display: flex; flex-direction: column; align-items: center; gap: 1px; position: relative }
+  .day .dow { font-size: 11px; color: var(--muted-foreground) }
+  .day .dnum { font-size: 15px; font-weight: 700; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50% }
+  .day.wkend .dow { color: color-mix(in oklch, var(--destructive) 70%, var(--muted-foreground)) }
+  .day.is-today .dnum { box-shadow: inset 0 0 0 1.5px var(--primary); color: var(--primary) }
+  .day[aria-pressed="true"] .dnum { background: var(--primary); color: var(--primary-foreground); box-shadow: none }
+  .day .mark { width: 4px; height: 4px; border-radius: 50%; background: transparent }
+  .day.has-dc .mark { background: var(--muted-foreground); opacity: .5 }
+  .day.has-fb .mark { background: var(--primary); opacity: 1 }
+  .day-note { font-size: 13px; padding: 8px 12px; border-radius: 12px; background: var(--muted); color: var(--muted-foreground); display: flex; gap: 6px; align-items: center }
+  .day-note .btn { margin-left: auto; flex: none }
+  .not-today .now-tag, .not-today .tabs button.is-now::after { display: none }
+
+  /* ── upload ── */
+  .drop { border: 1.5px dashed var(--border); border-radius: 18px; padding: 22px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+          text-align: center; cursor: pointer; background: var(--card) }
+  .drop:hover { background: var(--accent) }
+  .drop input { position: absolute; width: 1px; height: 1px; opacity: 0 }
+  .thumbs { display: flex; gap: 8px; flex-wrap: wrap }
+  .thumb { position: relative; width: 72px; height: 92px; border-radius: 12px; background: repeating-linear-gradient(0deg, var(--muted) 0 9px, var(--background) 9px 12px); border: 1px solid var(--border); display: grid; place-items: center; font-size: 22px }
+  .thumb button { position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); background: var(--background); color: var(--foreground); cursor: pointer; font-size: 11px }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--muted); border-radius: 99px }
+  .seg button { border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; height: 36px; border-radius: 99px; color: var(--muted-foreground); cursor: pointer }
+  .seg button[aria-pressed="true"] { background: var(--background); color: var(--foreground); box-shadow: 0 1px 3px oklch(0 0 0 / 0.12) }
+  .read-row { display: grid; grid-template-columns: 54px 1fr; gap: 8px; padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px }
+  .read-row:first-child { border-top: 0; padding-top: 0 }
+  .read-row b { font-size: 13px }
+  .read-row [contenteditable] { outline: none; border-radius: 6px; padding: 1px 4px; margin: -1px -4px }
+  .read-row [contenteditable]:focus { background: var(--accent) }
+  .unsure { background: color-mix(in oklch, var(--primary) 18%, transparent); border-radius: 4px; padding: 0 2px }
+  /* ── bottom tab bar ── */
+  .tabbar { position: sticky; bottom: -16px; z-index: 30; margin: 8px -12px -16px; padding: 6px 8px 12px; display: grid; grid-template-columns: repeat(3, 1fr);
+            background: color-mix(in oklch, var(--background) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--border) }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 1px; text-decoration: none; font-size: 11px; font-weight: 600; color: var(--muted-foreground); padding: 4px 0; border-radius: 12px }
+  .tabbar a span:first-child { font-size: 20px; line-height: 1.2; filter: grayscale(1); opacity: .7 }
+  .tabbar a[aria-current="page"] { color: var(--primary) }
+  .tabbar a[aria-current="page"] span:first-child { filter: none; opacity: 1 }
+  .tab-screen { min-height: calc(100% - 4px); display: flex; flex-direction: column }
+  .tab-screen > .app { flex: 1; width: 100% }
+  .toast { bottom: 78px }
+
+  /* ── day food-group summary ── */
+  .fg-row { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border) }
+  .fg-row:first-of-type { border-top: 0 }
+  .fg-mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--primary); color: var(--primary-foreground) }
+  .fg-row.miss .fg-mark { background: var(--background); border: 1.5px dashed var(--destructive); color: var(--destructive) }
+  .fg-row .nm { font-weight: 600; font-size: 14px }
+  .fg-row .src { font-size: 12px; color: var(--muted-foreground) }
+  .fg-row.miss .src { color: var(--destructive) }
+  .fg-fix { grid-column: 2; justify-self: start; margin-top: 4px }
+
+  /* ── settings ── */
+  .set-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border); text-decoration: none; color: inherit }
+  .set-row:first-child { border-top: 0; padding-top: 0 }
+  .set-row:last-child { padding-bottom: 0 }
+  .set-row .ico { width: 36px; height: 36px; border-radius: 10px; background: var(--muted); display: grid; place-items: center; font-size: 17px; flex: none }
+  .set-row .chev { color: var(--muted-foreground); margin-left: auto }
+
+  /* ── leftover ── */
+  .dishrow.leftover { background: color-mix(in oklch, var(--primary) 6%, var(--background)); border: 1px dashed color-mix(in oklch, var(--primary) 40%, var(--border)); border-radius: 14px; padding: 10px }
+  .dishrow.leftover + .dishrow { border-top: 0 }
+
+  /* ── shopping list ── */
+  .shop-group h3 { font-size: 13px; color: var(--muted-foreground); font-family: inherit; font-weight: 700; margin-bottom: 2px }
+  .shop-item { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--border); cursor: pointer }
+  .shop-group .shop-item:first-of-type { border-top: 0 }
+  .shop-item input { width: 20px; height: 20px; accent-color: var(--primary); margin: 0 }
+  .shop-item .nm { font-weight: 600; font-size: 15px }
+  .shop-item .for { font-size: 12px; color: var(--muted-foreground) }
+  .shop-item .amt { font-size: 13px; color: var(--muted-foreground); text-align: right }
+  .shop-item.got .nm { text-decoration: line-through; color: var(--muted-foreground); font-weight: 500 }
+  .progress { height: 6px; border-radius: 99px; background: var(--muted); overflow: hidden }
+  .progress i { display: block; height: 100%; background: var(--primary); transition: width .2s }
+
+  /* ── favorites ── */
+  .fav { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border) }
+  .fav:first-child { border-top: 0; padding-top: 0 }
+  .fav:last-child { padding-bottom: 0 }
+  .count { font-size: 12px; font-weight: 700; color: var(--primary) }
+
+  .textarea { min-height: 110px; border: 1px solid var(--input); border-radius: 14px; padding: 10px 12px; font: inherit; font-size: 15px; background: transparent; color: var(--foreground); width: 100%; resize: vertical }
+</style>
+
+<body class="sh-vp-390">
+<header class="sh-bar">
+  <b>proto</b>
+  <label class="sh-control"><span class="sh-control-label">screen</span><select id="sh-screen"></select></label>
+  <span class="sh-spacer"></span>
+  <label class="sh-control"><span class="sh-control-label">state</span><select id="sh-state"></select></label>
+  <button id="sh-vp">vp: full (m)</button>
+  <div class="sh-theme" id="sh-theme" role="group" aria-label="theme (t)" hidden>
+    <button data-theme="light">light</button><button data-theme="dark">dark</button>
+  </div>
+</header>
+
+<main class="sh-stage">
+
+  <!-- ═════════ 오늘 ═════════ -->
+  <section class="tab-screen" data-screen="today" data-title="오늘" data-states="하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날,추천 만드는 중,추천 실패,키즈노트 연결 만료">
+    <div class="app" id="today-app" style="gap:14px">
+      <div class="day-head">
+        <div class="col">
+          <span class="xs muted" style="font-weight:600"><span id="day-rel"></span><span id="day-time">오늘 · <span data-when="Default,어린이집 쉬는 날,추천 만드는 중,추천 실패,키즈노트 연결 만료">오전 7:40</span><span data-when="하원 후에 열었을 때">오후 4:30</span><span data-when="저녁에 열었을 때">오후 6:20</span></span></span>
+          <h1 id="day-label">11월 17일 화요일</h1>
+        </div>
+        <a class="icon-btn" href="#settings" aria-label="설정" data-component="Button" style="text-decoration:none;font-size:17px">⚙️</a>
+      </div>
+
+      <div class="week" data-component="new:WeekDatePicker" aria-label="날짜 고르기">
+        <button class="icon-btn" aria-label="지난주" onclick="shiftWeek(-1)">‹</button>
+        <div class="week-days" id="week-days"></div>
+        <button class="icon-btn" aria-label="다음 주" onclick="shiftWeek(1)">›</button>
+      </div>
+      <div class="day-note" id="day-note" hidden></div>
+
+      <div class="tabs" role="tablist" aria-label="끼니" data-component="Tabs" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날,추천 만드는 중,추천 실패">
+        <button role="tab" data-slide="0" onclick="goSlide(0)">아침</button>
+        <button role="tab" data-slide="1" onclick="goSlide(1)">점심</button>
+        <button role="tab" data-slide="2" onclick="goSlide(2)">간식</button>
+        <button role="tab" data-slide="3" onclick="goSlide(3)">저녁</button>
+      </div>
+
+      <!-- 연결 만료 -->
+      <div class="alert alert-destructive" data-component="Alert" data-when="키즈노트 연결 만료" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div class="col gap-2 grow">
+          <div class="col gap-1">
+            <span class="alert-title">키즈노트 연결이 끊겼어요</span>
+            <span class="alert-desc">다시 연결하면 오늘 어린이집 식단을 가져와서 추천해 드려요.</span>
+          </div>
+          <div class="row wrap">
+            <a class="btn btn-sm" href="#connect" data-component="Button">다시 연결하기</a>
+            <a class="btn btn-sm btn-outline" href="#upload" data-component="Button">📷 식단표 사진으로 올리기</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 추천 실패 -->
+      <div class="alert alert-destructive" data-component="Alert" data-when="추천 실패" role="alert">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div class="col gap-2 grow">
+          <div class="col gap-1">
+            <span class="alert-title">지금은 추천을 만들 수 없어요</span>
+            <span class="alert-desc">잠깐 사용량이 많아요. 1분쯤 뒤에 다시 눌러 주세요. 어린이집 식단은 아래에서 볼 수 있어요.</span>
+          </div>
+          <div><button class="btn btn-sm" data-component="Button" onclick="fakeLoad()">다시 추천받기</button></div>
+        </div>
+      </div>
+
+      <div class="slides" id="slides" data-component="new:MealCarousel" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날,추천 만드는 중,추천 실패" aria-live="polite">
+        <!-- 아침 -->
+        <div class="slide" data-idx="0" role="tabpanel" aria-label="아침">
+          <div class="slide-head">
+            <span class="who home-who">집에서</span>
+            <h2>아침</h2>
+            <span class="now-tag" data-when="Default,어린이집 쉬는 날">지금 준비할 끼니</span>
+          </div>
+          <span class="sub">10분 안에 차릴 수 있게 골랐어요</span>
+          <div class="meal" data-component="Card" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날" id="meal-breakfast"></div>
+          <div class="meal" data-component="Card" data-when="추천 만드는 중" aria-busy="true">
+            <div class="row gap-2 small muted"><span class="spinner" data-component="Spinner"></span>어린이집 식단을 보고 고르는 중이에요</div>
+            <div class="skeleton" style="height:150px;border-radius:18px"></div>
+            <div class="skeleton" style="height:16px;width:60%"></div>
+          </div>
+          <div class="meal" data-component="Empty" data-when="추천 실패"><div class="empty"><div class="empty-icon">🍽️</div><span class="small" style="font-weight:600">추천을 다시 받아 주세요</span></div></div>
+        </div>
+
+        <!-- 점심 -->
+        <div class="slide" data-idx="1" role="tabpanel" aria-label="점심">
+          <div data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,추천 만드는 중,추천 실패" class="col" style="gap:10px">
+            <div class="slide-head">
+              <span class="who">어린이집에서</span>
+              <h2>점심</h2>
+            </div>
+            <span class="sub" id="dc-sub">키즈노트에서 가져왔어요. 집에서 챙길 건 없어요.</span>
+            <div class="dc" data-component="Card" id="dc-card"></div>
+          </div>
+          <div data-when="어린이집 쉬는 날" class="col" style="gap:10px">
+            <div class="slide-head"><span class="who home-who">집에서</span><h2>점심</h2></div>
+            <span class="sub" id="off-sub">오늘은 어린이집에 가지 않아요</span>
+            <div class="meal" data-component="Card" id="meal-lunch"></div>
+          </div>
+        </div>
+
+        <!-- 간식 -->
+        <div class="slide" data-idx="2" role="tabpanel" aria-label="간식">
+          <div class="slide-head">
+            <span class="who home-who">집에서</span>
+            <h2>간식</h2>
+            <span class="now-tag" data-when="하원 후에 열었을 때">지금 준비할 끼니</span>
+          </div>
+          <span class="sub" id="snack-sub">하원 후 · 저녁 먹기 1시간 반 전까지 조금만</span>
+          <div class="meal" data-component="Card" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날" id="meal-snack"></div>
+          <div class="meal" data-component="Card" data-when="추천 만드는 중" aria-busy="true">
+            <div class="skeleton" style="height:150px;border-radius:18px"></div>
+            <div class="skeleton" style="height:16px;width:40%"></div>
+          </div>
+          <div class="meal" data-component="Empty" data-when="추천 실패"><div class="empty"><div class="empty-icon">🍽️</div><span class="small" style="font-weight:600">추천을 다시 받아 주세요</span></div></div>
+        </div>
+
+        <!-- 저녁 -->
+        <div class="slide" data-idx="3" role="tabpanel" aria-label="저녁">
+          <div class="slide-head">
+            <span class="who home-who">집에서</span>
+            <h2>저녁</h2>
+            <span class="now-tag" data-when="저녁에 열었을 때">지금 준비할 끼니</span>
+          </div>
+          <span class="sub">밥, 국, 반찬 한 상</span>
+          <div class="meal" data-component="Card" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날" id="meal-dinner"></div>
+          <div class="meal" data-component="Card" data-when="추천 만드는 중" aria-busy="true">
+            <div class="skeleton" style="height:150px;border-radius:18px"></div>
+            <div class="skeleton" style="height:16px;width:50%"></div>
+          </div>
+          <div class="meal" data-component="Empty" data-when="추천 실패"><div class="empty"><div class="empty-icon">🍽️</div><span class="small" style="font-weight:600">추천을 다시 받아 주세요</span></div></div>
+        </div>
+      </div>
+      <div class="dots" aria-hidden="true" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날,추천 만드는 중,추천 실패"><span></span><span></span><span></span><span></span></div>
+
+      <div class="card" id="fg-card" data-component="Card" data-when="Default,하원 후에 열었을 때,저녁에 열었을 때,어린이집 쉬는 날"></div>
+
+      <p class="disclaimer">이 추천은 의료·영양 상담이 아니에요. 알레르기나 성장이 걱정되면 소아청소년과 선생님과 먼저 상의해 주세요.</p>
+      <div class="toast" id="toast" hidden role="status"></div>
+    </div>
+    <nav class="tabbar" data-tabbar="today" data-component="new:BottomTabBar" aria-label="메뉴"></nav>
+
+    <!-- 레시피 시트 -->
+    <div class="sheet-overlay" id="recipe" hidden data-component="Sheet" onclick="if(event.target===this)closeRecipe()">
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="r-title">
+        <div class="row between">
+          <div class="col gap-1">
+            <h2 id="r-title">소고기무국</h2>
+            <span class="small muted" id="r-meta">20분 · 2~3회 분량</span>
+          </div>
+          <button class="btn btn-ghost btn-icon" aria-label="닫기" onclick="closeRecipe()" data-component="Button">✕</button>
+        </div>
+        <div class="pic" id="r-pic" style="width:100%;height:160px;border-radius:18px;--emoji:56px"></div>
+        <div class="row wrap gap-1" id="r-groups"></div>
+        <hr class="sep" data-component="Separator">
+        <div class="col gap-2">
+          <h3>재료</h3>
+          <ul class="ings" id="r-ings"></ul>
+        </div>
+        <hr class="sep" data-component="Separator">
+        <div class="col gap-2">
+          <h3>만드는 순서</h3>
+          <ol class="steps" id="r-steps"></ol>
+        </div>
+        <div class="alert" data-component="Alert">
+          <span>👶</span>
+          <div class="col gap-1">
+            <span class="alert-title">두 돌 아이에게 줄 때</span>
+            <span class="alert-desc" id="r-kid"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 장보기 ═════════ -->
+  <section class="tab-screen" data-screen="shop" data-title="장보기" data-states="다 챙김">
+    <div class="app">
+      <div class="col gap-2">
+        <h1>장보기 목록</h1>
+        <p class="small muted" style="margin:0">추천된 집 끼니에 필요한 재료를 모았어요. 집에 있으면 눌러서 지워 주세요.</p>
+      </div>
+      <div class="seg" role="group" aria-label="기간" data-component="ToggleGroup">
+        <button aria-pressed="true" id="rng-tomorrow" onclick="setRange('tomorrow')">내일 (18일 수)</button>
+        <button aria-pressed="false" id="rng-week" onclick="setRange('week')">이번 주 (18~22일)</button>
+      </div>
+      <div class="col gap-1">
+        <div class="row between small"><span id="shop-count" style="font-weight:600"></span><span class="xs muted" id="shop-meals"></span></div>
+        <div class="progress" data-component="Progress"><i id="shop-bar"></i></div>
+      </div>
+      <div class="card" data-component="Card" id="shop-list" data-when="Default"></div>
+      <div class="card" data-component="Empty" data-when="다 챙김">
+        <div class="empty">
+          <div class="empty-icon">🎉</div>
+          <span class="small" style="font-weight:600">다 챙겼어요</span>
+          <span class="xs muted">장 볼 재료가 남지 않았어요.</span>
+          <button class="btn btn-ghost btn-sm" data-component="Button" onclick="resetShop()">목록 다시 보기</button>
+        </div>
+      </div>
+      <span class="xs muted" id="shop-pantry"></span>
+      <button class="btn btn-outline btn-block" data-component="Button" onclick="showToast('남은 재료 목록을 복사했어요. 카톡에 붙여 넣어 보내세요')">📋 남은 재료 복사해서 보내기</button>
+      <div class="toast" id="toast-shop" hidden role="status"></div>
+    </div>
+    <nav class="tabbar" data-tabbar="shop" data-component="new:BottomTabBar" aria-label="메뉴"></nav>
+  </section>
+
+  <!-- ═════════ 잘 먹은 메뉴 ═════════ -->
+  <section class="tab-screen" data-screen="favs" data-title="잘 먹은 메뉴" data-states="비어 있음">
+    <div class="app">
+      <div class="col gap-2">
+        <h1>잘 먹은 메뉴</h1>
+        <p class="small muted" style="margin:0">"잘 먹음"을 누른 메뉴를 모았어요. 고민될 때 여기서 골라 바로 끼니에 넣을 수 있어요.</p>
+      </div>
+      <div class="card" data-component="Card" id="fav-list" data-when="Default"></div>
+      <div class="card" data-component="Empty" data-when="비어 있음">
+        <div class="empty">
+          <div class="empty-icon">😋</div>
+          <span class="small" style="font-weight:600">아직 모인 메뉴가 없어요</span>
+          <span class="xs muted">아이가 잘 먹은 메뉴에 "😋 잘 먹음"을 누르면 여기에 쌓여요.</span>
+        </div>
+      </div>
+      <div class="col gap-2" id="rest-wrap">
+        <h3>잠깐 쉬는 메뉴</h3>
+        <span class="xs muted" style="margin-top:-4px">"남김"을 누른 메뉴는 2주 동안 추천하지 않아요.</span>
+        <div class="card" data-component="Card" id="rest-list"></div>
+      </div>
+      <div class="toast" id="toast-favs" hidden role="status"></div>
+    </div>
+    <nav class="tabbar" data-tabbar="favs" data-component="new:BottomTabBar" aria-label="메뉴"></nav>
+  </section>
+
+  <!-- ═════════ 설정 ═════════ -->
+  <section data-screen="settings" data-title="설정" data-states="키즈노트 연결 안 함">
+    <div class="app">
+      <div class="row"><a class="btn btn-ghost btn-sm" href="#today" data-component="Button">← 오늘</a></div>
+      <h1>설정</h1>
+      <div class="col gap-2">
+        <h3>어린이집 식단 가져오기</h3>
+        <div class="card" data-component="Card">
+          <a class="set-row" href="#connect" data-component="Item">
+            <span class="ico">🏫</span>
+            <span class="col grow">
+              <span style="font-weight:600">키즈노트</span>
+              <span class="xs muted" data-when="Default"><span class="status-dot"></span> 연결됨 · 매일 아침 자동으로 가져와요</span>
+              <span class="xs muted" data-when="키즈노트 연결 안 함">연결하면 식단을 매일 자동으로 가져와요</span>
+            </span>
+            <span class="chev">›</span>
+          </a>
+          <a class="set-row" href="#upload" data-component="Item">
+            <span class="ico">📷</span>
+            <span class="col grow">
+              <span style="font-weight:600">식단표 사진·링크 올리기</span>
+              <span class="xs muted">키즈노트 없이 식단표를 직접 올려요</span>
+            </span>
+            <span class="chev">›</span>
+          </a>
+        </div>
+      </div>
+      <div class="col gap-2">
+        <h3>추천에서 뺄 음식</h3>
+        <div class="card" data-component="Card">
+          <a class="set-row" href="#avoid" data-component="Item">
+            <span class="ico">🚫</span>
+            <span class="col grow">
+              <span style="font-weight:600">피할 음식</span>
+              <span class="xs muted" id="avoid-summary">땅콩, 새우, 메밀</span>
+            </span>
+            <span class="chev">›</span>
+          </a>
+          <a class="set-row" href="#favs" data-component="Item">
+            <span class="ico">😣</span>
+            <span class="col grow">
+              <span style="font-weight:600">잠깐 쉬는 메뉴</span>
+              <span class="xs muted">"남김"을 누른 메뉴는 2주 동안 빼요</span>
+            </span>
+            <span class="chev">›</span>
+          </a>
+        </div>
+      </div>
+      <p class="disclaimer">이 추천은 의료·영양 상담이 아니에요.</p>
+    </div>
+  </section>
+
+  <!-- ═════════ 키즈노트 연결 ═════════ -->
+  <section data-screen="connect" data-title="키즈노트 연결" data-states="인증 코드,연결 실패">
+    <div class="app">
+      <div class="row"><a class="btn btn-ghost btn-sm" href="#settings" data-component="Button">← 설정</a></div>
+      <div class="col gap-2">
+        <h1>키즈노트 연결</h1>
+        <p class="small muted" style="margin:0">어린이집 식단을 매일 자동으로 가져오려고 키즈노트 계정으로 한 번 로그인해요. 한 집에서 한 사람만 연결하면 돼요.</p>
+      </div>
+
+      <form class="card" data-component="Card" data-when="Default,연결 실패" onsubmit="event.preventDefault(); submitLogin(this)">
+        <div class="alert alert-destructive" data-component="Alert" data-when="연결 실패" role="alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <div class="col gap-1">
+            <span class="alert-title">로그인하지 못했어요</span>
+            <span class="alert-desc">아이디나 비밀번호가 키즈노트와 달라요. 키즈노트 앱에서 쓰는 그대로 입력해 주세요.</span>
+          </div>
+        </div>
+        <div class="field" data-component="Field">
+          <label for="kn-id">키즈노트 아이디</label>
+          <input class="input" id="kn-id" autocomplete="username" value="happymom0823" data-component="Input">
+        </div>
+        <div class="field" data-component="Field">
+          <label for="kn-pw">비밀번호</label>
+          <input class="input" id="kn-pw" type="password" autocomplete="current-password" value="••••••••••" data-component="Input">
+          <span class="field-desc">비밀번호는 로그인할 때 한 번만 쓰고 저장하지 않아요.</span>
+        </div>
+        <button class="btn btn-lg" data-component="Button" id="login-btn">연결하기</button>
+      </form>
+
+      <form class="card" data-component="Card" data-when="인증 코드" onsubmit="event.preventDefault(); finishConnect()">
+        <div class="col gap-1">
+          <h2>인증 코드를 입력해 주세요</h2>
+          <span class="small muted">키즈노트 계정에 2단계 인증이 켜져 있어요. 010-****-5821로 보낸 6자리 코드를 입력해 주세요.</span>
+        </div>
+        <div class="otp" data-component="InputOTP">
+          <input maxlength="1" inputmode="numeric" aria-label="1번째 숫자" value="4">
+          <input maxlength="1" inputmode="numeric" aria-label="2번째 숫자" value="8">
+          <input maxlength="1" inputmode="numeric" aria-label="3번째 숫자" value="1">
+          <input maxlength="1" inputmode="numeric" aria-label="4번째 숫자">
+          <input maxlength="1" inputmode="numeric" aria-label="5번째 숫자">
+          <input maxlength="1" inputmode="numeric" aria-label="6번째 숫자">
+        </div>
+        <button class="btn btn-lg" data-component="Button">확인</button>
+        <div class="row between">
+          <button type="button" class="btn btn-ghost btn-sm" data-component="Button" onclick="prototypeShell.setState('Default')">처음으로</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-component="Button" onclick="showToast('인증 코드를 다시 보냈어요')">코드 다시 받기</button>
+        </div>
+      </form>
+      <div class="card card-muted" data-component="Card" data-when="Default,연결 실패">
+        <div class="col gap-1">
+          <h3>키즈노트를 안 쓰거나 연결하기 싫다면</h3>
+          <span class="small muted">어린이집에서 받은 식단표 사진이나 링크를 올려도 돼요.</span>
+        </div>
+        <a class="btn btn-outline" href="#upload" data-component="Button">📷 식단표 올리기</a>
+      </div>
+      <div class="toast" id="toast2" hidden role="status"></div>
+    </div>
+  </section>
+
+  <!-- ═════════ 식단표 올리기 ═════════ -->
+  <section data-screen="upload" data-title="식단표 올리기" data-states="사진 고름,읽는 중,읽은 결과,읽기 실패">
+    <div class="app">
+      <div class="row"><a class="btn btn-ghost btn-sm" href="#today" data-component="Button">← 오늘</a></div>
+      <div class="col gap-2">
+        <h1>식단표 올리기</h1>
+        <p class="small muted" style="margin:0">키즈노트를 연결하지 않아도 돼요. 어린이집 식단표 사진이나 링크를 올리면 날짜별 메뉴를 읽어서 추천에 써요.</p>
+      </div>
+
+      <!-- 고르기 -->
+      <div class="col gap-3" data-when="Default,사진 고름">
+        <div class="seg" role="group" aria-label="올리는 방법" data-component="ToggleGroup">
+          <button aria-pressed="true" id="seg-photo" onclick="setUploadMode('photo')">📷 사진</button>
+          <button aria-pressed="false" id="seg-link" onclick="setUploadMode('link')">🔗 링크</button>
+        </div>
+
+        <div class="col gap-3" id="mode-photo">
+          <label class="drop" data-component="new:FileDrop" data-when="Default">
+            <input type="file" accept="image/*" multiple onchange="prototypeShell.setState('사진 고름')">
+            <span style="font-size:30px">📷</span>
+            <span style="font-weight:700">사진 찍기 또는 앨범에서 고르기</span>
+            <span class="xs muted">주간·월간 식단표 모두 돼요. 여러 장도 한 번에 올릴 수 있어요.</span>
+          </label>
+          <div class="card" data-component="Card" data-when="사진 고름">
+            <div class="row between"><span class="small" style="font-weight:600">고른 사진 2장</span><label class="btn btn-ghost btn-sm" data-component="Button">+ 더 고르기<input type="file" accept="image/*" multiple style="display:none"></label></div>
+            <div class="thumbs">
+              <div class="thumb" aria-label="식단표 사진 1">🗒️<button aria-label="사진 1 빼기">✕</button></div>
+              <div class="thumb" aria-label="식단표 사진 2">🗒️<button aria-label="사진 2 빼기" onclick="prototypeShell.setState('Default')">✕</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col gap-3" id="mode-link" hidden>
+          <div class="field" data-component="Field">
+            <label for="menu-url">식단표 링크</label>
+            <input class="input" id="menu-url" type="url" inputmode="url" placeholder="https://" value="https://blog.naver.com/kids_center/2239011" data-component="Input">
+            <span class="field-desc">어린이집 홈페이지·블로그 게시글이나 식단표 이미지 주소를 붙여 넣어 주세요.</span>
+          </div>
+        </div>
+
+        <button class="btn btn-lg" data-component="Button" id="read-btn" onclick="readMenu()">식단 읽어 오기</button>
+        <span class="xs muted" style="text-align:center">사진은 메뉴를 읽는 데만 쓰고 바로 지워요.</span>
+      </div>
+
+      <!-- 읽는 중 -->
+      <div class="card" data-component="Card" data-when="읽는 중" aria-busy="true">
+        <div class="row gap-2 small muted"><span class="spinner" data-component="Spinner"></span>식단표에서 날짜와 메뉴를 찾는 중이에요</div>
+        <div class="skeleton" style="height:18px;width:70%"></div>
+        <div class="skeleton" style="height:18px;width:90%"></div>
+        <div class="skeleton" style="height:18px;width:60%"></div>
+        <div class="skeleton" style="height:18px;width:80%"></div>
+      </div>
+
+      <!-- 읽은 결과 -->
+      <div class="col gap-3" data-when="읽은 결과">
+        <div class="alert" data-component="Alert">
+          <span>✅</span>
+          <div class="col gap-1">
+            <span class="alert-title">11월 23일 ~ 27일, 5일 식단을 읽었어요</span>
+            <span class="alert-desc">맞게 읽었는지 한 번만 봐 주세요. 색칠한 글자는 흐려서 짐작한 거예요. 틀린 곳은 눌러서 고치면 돼요.</span>
+          </div>
+        </div>
+        <div class="card" data-component="Card" style="gap:0">
+          <div class="read-row"><b>23 월</b><div class="col gap-1"><span contenteditable>점심 · 현미밥, 감자국, 제육볶음, 시금치나물, 배추김치</span><span class="xs muted" contenteditable>간식 · 사과, 우유 / 떡</span></div></div>
+          <div class="read-row"><b>24 화</b><div class="col gap-1"><span contenteditable>점심 · 잡곡밥, 콩나물국, <span class="unsure">삼치</span>구이, 무생채, 깍두기</span><span class="xs muted" contenteditable>간식 · 바나나 / 감자전</span></div></div>
+          <div class="read-row"><b>25 수</b><div class="col gap-1"><span contenteditable>점심 · 카레라이스, 맑은 어묵국, 단무지</span><span class="xs muted" contenteditable>간식 · 요거트 / 찐 고구마</span></div></div>
+          <div class="read-row"><b>26 목</b><div class="col gap-1"><span contenteditable>점심 · 백미밥, 북엇국, 닭볶음탕, <span class="unsure">청경채</span>무침, 배추김치</span><span class="xs muted" contenteditable>간식 · 귤 / 옥수수빵</span></div></div>
+          <div class="read-row"><b>27 금</b><div class="col gap-1"><span contenteditable>점심 · 짜장밥, 달걀국, 오이무침, 깍두기</span><span class="xs muted" contenteditable>간식 · 시리얼, 우유 / 군만두</span></div></div>
+        </div>
+        <button class="btn btn-lg" data-component="Button" onclick="saveUpload()">이대로 저장하고 추천받기</button>
+        <button class="btn btn-ghost" data-component="Button" onclick="prototypeShell.setState('Default')">다른 사진으로 다시 하기</button>
+      </div>
+
+      <!-- 읽기 실패 -->
+      <div class="col gap-3" data-when="읽기 실패">
+        <div class="alert alert-destructive" data-component="Alert" role="alert">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <div class="col gap-1">
+            <span class="alert-title">식단을 찾지 못했어요</span>
+            <span class="alert-desc">사진이 흐리거나 링크가 열리지 않았어요. 글자가 잘 보이게 다시 찍거나, 메뉴를 직접 적어 주세요.</span>
+          </div>
+        </div>
+        <button class="btn btn-outline" data-component="Button" onclick="prototypeShell.setState('Default')">📷 다시 올리기</button>
+        <div class="card" data-component="Card">
+          <div class="field" data-component="Field">
+            <label for="menu-text">오늘 어린이집 메뉴 직접 적기</label>
+            <textarea class="textarea" id="menu-text" placeholder="예: 잡곡밥, 두부장국, 생선까스, 양배추무침" data-component="Textarea"></textarea>
+            <span class="field-desc">쉼표로 나눠 적으면 돼요. 간식은 안 적어도 괜찮아요.</span>
+          </div>
+          <button class="btn" data-component="Button" onclick="saveUpload()">이 메뉴로 추천받기</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════════ 피할 음식 ═════════ -->
+  <section data-screen="avoid" data-title="피할 음식" data-states="비어 있음">
+    <div class="app">
+      <div class="row"><a class="btn btn-ghost btn-sm" href="#settings" data-component="Button">← 설정</a></div>
+      <div class="col gap-2">
+        <h1>피할 음식</h1>
+        <p class="small muted" style="margin:0">알레르기가 있거나 아직 먹이지 않는 음식을 적어 두면 추천에서 빼요.</p>
+      </div>
+      <div class="card" data-component="Card">
+        <form class="row gap-2" onsubmit="event.preventDefault(); addAvoid()">
+          <div class="field grow" data-component="Field">
+            <label for="avoid-input" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">피할 음식</label>
+            <input class="input" id="avoid-input" placeholder="예: 땅콩, 새우, 메밀" data-component="Input">
+          </div>
+          <button class="btn" style="height:44px" data-component="Button">추가</button>
+        </form>
+        <div class="chips" id="avoid-chips" data-when="Default"></div>
+        <div class="empty" data-component="Empty" data-when="비어 있음">
+          <div class="empty-icon">🥜</div>
+          <span class="small" style="font-weight:600">아직 적어 둔 음식이 없어요</span>
+          <span class="xs muted">없으면 비워 둬도 괜찮아요.</span>
+        </div>
+      </div>
+      <p class="disclaimer">알레르기 진단은 병원에서 받아 주세요. 여기 적은 음식은 추천에서 빼는 데만 써요.</p>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  /* ── dummy data ── */
+  const R = (food, tone, meta, groups, ings, steps, kid) => ({ food, tone, meta, groups, ings, steps, kid });
+  const RECIPES = {
+    '바나나 오트밀': R('🥣','', '5분 · 1회 분량', ['곡류','과일','우유·유제품'], [['오트밀','3큰술 (20g)'],['우유','120ml'],['바나나','1/2개']],
+      ['작은 냄비에 우유와 오트밀을 넣고 약불에서 3분 저어 가며 끓여요.','바나나를 포크로 으깨서 넣고 1분 더 저어요.','손등에 올려 미지근해질 때까지 식혀요.'], '설탕이나 꿀은 넣지 않아요. 바나나 단맛으로 충분해요.'),
+    '달걀 치즈 토스트': R('🍞','', '8분 · 1회 분량', ['곡류','고기·생선·달걀·콩','우유·유제품'], [['식빵','1장'],['달걀','1개'],['아기 치즈','1장']],
+      ['달걀을 풀어 식빵 양면을 적셔요.','약불 팬에 앞뒤로 2분씩 구워요.','치즈를 올려 녹인 뒤 한입 크기로 잘라요.'], '가장자리 딱딱한 부분은 잘라 주세요.'),
+    '사과': R('🍎','t2', '2분', ['과일'], [['사과','1/4개']], ['껍질을 벗기고 얇게 썰어요.'], '둥근 조각은 목에 걸릴 수 있어요. 얇고 길게 썰어 주세요.'),
+    '고구마 요거트': R('🍠','', '5분 · 미리 쪄 둔 고구마', ['곡류','우유·유제품'], [['찐 고구마','1/3개'],['플레인 요거트','80g']], ['고구마를 으깨요.','요거트와 섞어요.'], '요거트는 무가당으로 골라 주세요.'),
+    '귤': R('🍊','', '1분', ['과일'], [['귤','1개']], ['껍질을 까고 알맹이를 반으로 잘라요.'], '속껍질이 질기면 벗겨 주세요.'),
+    '잡곡밥': R('🍚','t3', '집에 있는 밥', ['곡류'], [['잡곡밥','1/2공기 (80g)']], ['밥을 데워요.'], '질게 지은 밥이 먹기 편해요.'),
+    '소고기무국': R('🍲','t2', '20분 · 2~3회 분량', ['고기·생선·달걀·콩','채소'], [['소고기 양지','60g'],['무','1/8개 (80g)'],['국간장','1/2작은술'],['참기름','약간'],['물','500ml']],
+      ['소고기는 키친타월로 핏물을 빼고 잘게 썰어요.','참기름에 소고기를 볶다가 나박썬 무를 넣고 2분 더 볶아요.','물을 붓고 중불에서 15분 끓여요.','국간장은 아주 조금만 넣어요.'], '어른 국의 절반 이하로 싱겁게 해 주세요. 무와 고기는 새끼손톱보다 작게 썰어요.'),
+    '미역국': R('🥣','t2', '20분 · 2~3회 분량', ['채소'], [['마른 미역','5g'],['참기름','약간'],['국간장','1/2작은술'],['물','500ml']], ['미역을 10분 불려 잘게 썰어요.','참기름에 볶다 물을 붓고 15분 끓여요.'], '미역은 길면 목에 걸려요. 아주 잘게 썰어 주세요.'),
+    '애호박 된장국': R('🍵','t2', '15분 · 2회 분량', ['채소'], [['애호박','1/4개'],['감자','1/4개'],['된장','1/2작은술'],['멸치 육수','400ml']], ['채소를 작게 썰어요.','육수에 된장을 풀고 채소를 넣어 10분 끓여요.'], '된장은 아주 조금만 풀어 주세요.'),
+    '애호박 달걀전': R('🍳','', '10분 · 2회 분량', ['고기·생선·달걀·콩','채소'], [['애호박','1/3개'],['달걀','1개'],['부침가루','1큰술']], ['애호박을 얇게 채 썰어요.','달걀과 부침가루를 섞고 애호박을 버무려요.','약불 팬에 한 숟가락씩 올려 앞뒤로 부쳐요.'], '소금은 넣지 않아도 돼요. 식힌 뒤 잘라 주세요.'),
+    '닭고기 감자조림': R('🍗','', '25분 · 2~3회 분량', ['고기·생선·달걀·콩','채소'], [['닭안심','80g'],['감자','1/2개'],['당근','1/4개'],['간장','1/2작은술'],['물','150ml']], ['재료를 깍둑 썰어요.','물과 간장을 넣고 약불로 20분 조려요.'], '닭고기는 결 반대로 잘게 찢어 주세요.'),
+    '달걀찜': R('🥚','', '12분 · 2회 분량', ['고기·생선·달걀·콩'], [['달걀','2개'],['물','100ml']], ['달걀과 물을 섞어 체에 걸러요.','전자레인지에 1분씩 끊어서 3번 익혀요.'], '소금 없이도 괜찮아요.'),
+    '시금치나물': R('🥬','t2', '7분 · 2회 분량', ['채소'], [['시금치','한 줌 (50g)'],['참기름','약간'],['깨','약간']], ['시금치를 30초 데쳐 찬물에 헹궈요.','물기를 짜고 2cm 길이로 썰어요.','참기름과 깨로 무쳐요.'], '줄기는 질길 수 있어 잎 위주로 주세요.'),
+    '브로콜리 무침': R('','none', '6분 · 2회 분량', ['채소'], [['브로콜리','1/4송이'],['참기름','약간']], ['작은 송이로 잘라 1분 데쳐요.','참기름에 버무려요.'], '송이는 아이 엄지손톱 크기로 잘라 주세요.'),
+    '콩나물무침': R('🌱','t2', '8분 · 2회 분량', ['채소'], [['콩나물','한 줌'],['참기름','약간']], ['콩나물을 5분 삶아요.','2cm 길이로 잘라 참기름에 무쳐요.'], '꼬리는 떼고 짧게 잘라 주세요.'),
+    '소고기 채소죽': R('🥣','', '25분 · 2회 분량', ['곡류','고기·생선·달걀·콩','채소'], [['밥','1/2공기'],['다진 소고기','40g'],['애호박·당근','각 2큰술'],['물','300ml']], ['다진 소고기를 볶다가 채소를 넣어요.','밥과 물을 넣고 저어 가며 15분 끓여요.'], '뜨거우니 충분히 식혀 주세요.'),
+  };
+
+  /* 끼니마다 칸(slot)이 있고, 칸마다 후보를 돌려 가며 바꿔요. 밥은 기본 음식이라 바꾸지 않아요. */
+  const MEALS = {
+    breakfast: { why: '어린이집 식단에 과일이 없어서 과일이 들어간 메뉴로 골랐어요.', whyOff: '점심에 고기가 들어가서 아침 단백질은 달걀이나 우유로 채웠어요.',
+      slots: [ ['바나나 오트밀','달걀 치즈 토스트','고구마 요거트'], ['','사과','귤'] ] },
+    lunch:     { why: '아침에 곡류와 과일을 먹어서 점심은 고기와 채소를 넉넉히 넣었어요.',
+      slots: [ ['소고기 채소죽','잡곡밥'], ['귤','달걀찜'] ] },
+    dinner:    { why: '점심에 생선과 두부가 나와서 저녁 단백질은 고기와 달걀로 골랐어요.',
+      slots: [ ['잡곡밥'], ['소고기무국','미역국','애호박 된장국'], ['애호박 달걀전','닭고기 감자조림','달걀찜'], ['시금치나물','브로콜리 무침','콩나물무침'] ] },
+  };
+  /* 간식: 하원 후(평일) 또는 오후(쉬는 날)에 1~2가지 가볍게. 어린이집 오후간식과 겹치지 않게. */
+  MEALS.snack = { why: '', whyOff: '점심과 저녁 사이에 배고프지 않을 만큼만 줘요. 단 과자 대신 간단한 자연 간식으로 골랐어요.',
+    slots: [ ['찐 고구마','플레인 요거트','아기 치즈'], ['','귤','바나나'] ] };
+  Object.assign(RECIPES, {
+    '플레인 요거트': R('🥛','t3', '1분', ['우유·유제품'], [['플레인 요거트','80g']], ['그릇에 덜어 줘요.'], '무가당으로 골라 주세요. 꿀은 돌 전후 아이에게 주지 않아요.'),
+    '찐 고구마': R('🍠','', '2분 · 미리 쪄 둔 것', ['곡류'], [['찐 고구마','1/3개']], ['전자레인지에 30초 데워요.','껍질을 벗기고 한입 크기로 잘라요.'], '목이 메기 쉬우니 물이나 우유와 함께 주세요.'),
+    '아기 치즈': R('🧀','t3', '1분', ['우유·유제품'], [['아기 치즈','1장']], ['작게 찢어서 줘요.'], '어른 치즈는 짜요. 아기용으로 주세요.'),
+    '바나나': R('🍌','t2', '1분', ['과일'], [['바나나','1/2개']], ['껍질을 벗기고 길게 반 갈라 잘라요.'], '둥글게 썰면 목에 걸릴 수 있어요. 길게 잘라 주세요.'),
+  });
+  const MEAL_ORDER = ['breakfast', 'lunch', 'snack', 'dinner'];
+  const SLIDE = { breakfast: 0, lunch: 1, snack: 2, dinner: 3 };
+  const pick = { breakfast:[0,0], lunch:[0,0], snack:[0,0], dinner:[0,0,0,0] };
+  const feedback = {};
+  const FB = [['😋','잘 먹음'],['🙂','보통'],['😣','남김']];
+
+  function dishHTML(meal, slot, name) {
+    const r = RECIPES[name]; const fb = feedback[name];
+    const canSwap = MEALS[meal].slots[slot].filter(Boolean).length > 1;
+    if (name === '잡곡밥') return `<div class="dishrow" data-slot="${meal}-${slot}"><div class="row gap-2 small"><span class="badge" data-component="Badge">기본</span><span>잡곡밥 1/2공기와 함께 차려 주세요</span></div></div>`;
+    return `<div class="dishrow" data-slot="${meal}-${slot}">
+      <div class="dish-top">
+        <div class="pic ${r.tone}" data-food="${r.food}" aria-hidden="true"></div>
+        <div class="col grow gap-1">
+          <span class="dish-name">${name}</span>
+          <span class="xs muted">${r.meta.split(' · ')[0]} · ${r.groups.join(', ')}</span>
+          ${meal === 'dinner' && /국/.test(name) && /2~3회/.test(r.meta) ? '<span class="xs" style="color:var(--primary)">♻️ 넉넉히 끓이면 내일 저녁엔 데우기만 해요</span>' : ''}
+          <div class="dish-actions">
+            <button class="btn btn-outline btn-sm" data-component="Button" onclick="openRecipe('${name}')">📖 레시피</button>
+            ${canSwap ? `<button class="btn btn-ghost btn-sm" data-component="Button" aria-label="${name} 대신 다른 메뉴로 바꾸기" onclick="swapOne('${meal}',${slot})">🔀 이것만 바꾸기</button>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="fb" role="group" aria-label="${name} 먹은 반응" data-component="ToggleGroup">
+        ${FB.map(([e,l]) => `<button type="button" aria-pressed="${fb===l}" onclick="setFeedback('${name}','${l}')">${e} ${l}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+  /* 날짜별로 고른 메뉴. 남김(쉬는 메뉴)은 오늘 이후 날짜의 추천에서만 빼요. */
+  const seedOf = d => Math.round((d - TODAY) / 864e5) + 31;
+  function dishesFor(meal, d) {
+    const future = d > TODAY;
+    return MEALS[meal].slots.map((pool, i) => {
+      for (let k = 0; k < pool.length; k++) {
+        const n = pool[(pick[meal][i] + seedOf(d) + k) % pool.length];
+        if (!(future && n && resting(n))) return [i, n];
+      }
+      return [i, ''];
+    }).filter(([,n]) => n);
+  }
+  /* 남은 음식: 2~3회 분량 국을 끓인 다음 날 저녁은 데우기만 */
+  const LEFTOVER = { '2026-11-17': { name: '소고기무국', from: '어제 저녁에 끓인 국' }, '2026-11-19': { name: '애호박 된장국', from: '어제 저녁에 끓인 국' } };
+  const leftoverOff = {};
+  const leftoverOf = d => (!leftoverOff[iso(d)] && LEFTOVER[iso(d)]) || null;
+  function leftoverHTML(lo) {
+    const r = RECIPES[lo.name]; const fb = feedback[lo.name];
+    return `<div class="dishrow leftover" data-slot="dinner-1" data-component="new:LeftoverDish">
+      <div class="dish-top">
+        <div class="pic ${r.tone}" data-food="${r.food}" aria-hidden="true"></div>
+        <div class="col grow gap-1">
+          <span><span class="badge badge-primary" data-component="Badge">♻️ ${lo.from}</span></span>
+          <span class="dish-name">${lo.name}</span>
+          <span class="xs muted">데우기만 하면 돼요 · ${r.groups.join(', ')}</span>
+          <div class="dish-actions">
+            <button class="btn btn-ghost btn-sm" data-component="Button" onclick="cookFresh()">🍲 다 먹었어요, 새로 고르기</button>
+          </div>
+        </div>
+      </div>
+      <div class="fb" role="group" aria-label="${lo.name} 먹은 반응" data-component="ToggleGroup">
+        ${FB.map(([e,l]) => `<button type="button" aria-pressed="${fb===l}" onclick="setFeedback('${lo.name}','${l}')">${e} ${l}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+  function cookFresh() { leftoverOff[iso(selDay)] = true; render(); showToast('남은 국 대신 새 국을 골랐어요'); }
+  function mealHTML(meal) {
+    const m = MEALS[meal];
+    const off = prototypeShell.getState() === '어린이집 쉬는 날';
+    let why = dayKind() === 'missing' ? '어린이집 식단을 몰라서 집 끼니만으로 식품군을 골고루 채웠어요.' : off && m.whyOff ? m.whyOff : m.why;
+    if (meal === 'snack' && dayKind() === 'dc') why = `어린이집 오후간식(${DC[iso(selDay)][2]})과 겹치지 않게 골랐어요. 저녁을 잘 먹도록 조금만 주세요.`;
+    const dishes = dishesFor(meal, selDay);
+    const lo = meal === 'dinner' ? leftoverOf(selDay) : null;
+    const main = lo ? dishes.map(([,n]) => n).find(n => n !== '잡곡밥' && RECIPES[n].groups.includes('고기·생선·달걀·콩') && !/국/.test(n)) || lo.name : dishes.map(([,n]) => n).find(n => n !== '잡곡밥');
+    const mr = RECIPES[main];
+    return `<div class="pic hero ${mr.tone}" data-food="${mr.food}" aria-label="${main} 사진"></div>
+      <div class="why"><span>💡</span><span>${lo ? '어제 끓인 국이 남아서 오늘은 반찬만 새로 만들면 돼요. ' : ''}${why}</span></div>
+      ${dishes.map(([i,n]) => lo && i === 1 ? leftoverHTML(lo) : dishHTML(meal, i, n)).join('')}
+      <span class="fb-label">먹여 봤다면 반응을 눌러 주세요. 안 눌러도 괜찮아요.</span>
+      <button class="btn btn-soft btn-block" style="height:40px" data-component="Button" onclick="swapAll('${meal}', this)">🔀 ${meal==='breakfast' ? '다른 아침' : meal==='lunch' ? '다른 점심' : meal==='snack' ? '다른 간식' : '다른 한 상'} 보기</button>`;
+  }
+  function render() {
+    for (const meal of Object.keys(MEALS)) { const el = document.getElementById('meal-' + meal); if (el) el.innerHTML = mealHTML(meal); }
+    renderFG();
+    if (typeof fitSlides === 'function' && prototypeShell?.getScreen() === 'today') requestAnimationFrame(() => fitSlides());
+  }
+
+  /* ── 이날 하루 식품군: 어린이집 식단 + 집 끼니를 합쳐 어디서 채웠는지 보여 줘요 ── */
+  const GROUPS = ['곡류', '고기·생선·달걀·콩', '채소', '과일', '우유·유제품'];
+  function dayGroups(d) {
+    const src = Object.fromEntries(GROUPS.map(g => [g, []]));
+    const add = (g, s) => { if (!src[g].includes(s)) src[g].push(s); };
+    const k = dayKind(d), dc = DC[iso(d)];
+    if (k === 'dc') {
+      ['곡류', '고기·생선·달걀·콩', '채소'].forEach(g => add(g, '어린이집 점심'));
+      const snack = dc[0] + ' ' + dc[2];
+      if (/바나나|사과|귤|배|단호박/.test(snack)) add('과일', '어린이집 간식');
+      if (/우유|요거트|두유|치즈/.test(snack)) add('우유·유제품', '어린이집 간식');
+    }
+    const meals = k === 'off' ? ['breakfast', 'lunch', 'snack', 'dinner'] : ['breakfast', 'snack', 'dinner'];
+    for (const meal of meals) {
+      const lo = meal === 'dinner' ? leftoverOf(d) : null;
+      for (const [i, n] of dishesFor(meal, d)) {
+        const name = lo && i === 1 ? lo.name : n;
+        RECIPES[name].groups.forEach(g => add(g, `집 ${MEAL_KO[meal]}`));
+      }
+    }
+    return { src, unknownDc: k === 'missing' };
+  }
+  function fixFor(g) {
+    for (const meal of ['breakfast', 'snack', 'dinner']) {
+      const slots = MEALS[meal].slots;
+      const filled = new Set(dishesFor(meal, selDay).map(([i]) => i));
+      const order = [...slots.keys()].sort((a, b) => filled.has(a) - filled.has(b)); // 빈 칸부터 채워요
+      for (const i of order) {
+        const n = slots[i].find(x => x && RECIPES[x].groups.includes(g) && !dishesFor(meal, selDay).some(([, y]) => y === x));
+        if (n) return { meal, i, n };
+      }
+    }
+  }
+  function renderFG() {
+    const el = document.getElementById('fg-card'); if (!el) return;
+    const { src, unknownDc } = dayGroups(selDay);
+    const miss = GROUPS.filter(g => !src[g].length);
+    el.innerHTML = `<div class="row between">
+        <div class="col"><h3>이날 하루 식품군</h3><span class="xs muted">${unknownDc ? '어린이집 식단 없이 집 끼니만 셌어요' : '어린이집 식단과 집 끼니를 합쳤어요'}</span></div>
+        <span class="badge ${miss.length ? '' : 'badge-primary'}" data-component="Badge">${miss.length ? `${miss.length}가지 비었어요` : '5가지 다 채웠어요'}</span>
+      </div>
+      <div class="col">${GROUPS.map(g => {
+        const f = !src[g].length && fixFor(g);
+        return `<div class="fg-row ${src[g].length ? '' : 'miss'}">
+          <span class="fg-mark">${src[g].length ? '✓' : '!'}</span>
+          <span class="col"><span class="nm">${g}</span><span class="src">${src[g].length ? src[g].join(' · ') : '오늘 끼니에 없어요'}</span></span>
+          ${f ? `<button class="btn btn-soft btn-sm fg-fix" data-component="Button" onclick="applyFix('${f.meal}',${f.i},'${f.n}')">${MEAL_KO[f.meal]}에 ${josa(f.n,'을','를')} 넣어 채우기</button>` : ''}
+        </div>`; }).join('')}</div>`;
+  }
+  function applyFix(meal, i, n) {
+    const pool = MEALS[meal].slots[i], len = pool.length;
+    pick[meal][i] = (((pool.indexOf(n) - seedOf(selDay)) % len) + len) % len;
+    render(); goSlide(SLIDE[meal]);
+    showToast(`${MEAL_KO[meal]}에 ${josa(n,'을','를')} 넣었어요`);
+  }
+  function swapOne(meal, slot) {
+    const row = document.querySelector(`[data-slot="${meal}-${slot}"]`); row.classList.add('swapping');
+    setTimeout(() => { const pool = MEALS[meal].slots[slot]; do { pick[meal][slot]++; } while (!pool[pick[meal][slot] % pool.length] && pool.filter(Boolean).length); render(); }, 350);
+  }
+  function swapAll(meal, btn) {
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 다시 고르는 중';
+    document.getElementById('meal-' + meal).classList.add('swapping');
+    setTimeout(() => { pick[meal] = pick[meal].map(x => x + 1); document.getElementById('meal-' + meal).classList.remove('swapping'); render(); }, 700);
+  }
+  function josa(word, a, b) { const c = word.charCodeAt(word.length - 1) - 0xac00; return word + (c >= 0 && c <= 11171 && c % 28 !== 0 ? a : b); }
+  function setFeedback(name, val) {
+    feedback[name] = feedback[name] === val ? undefined : val;
+    FED[iso(selDay)] = Object.values(feedback).some(Boolean) || FED[iso(selDay)];
+    render(); renderWeek();
+    if (feedback[name]) showToast(val === '남김' ? `${josa(name,'은','는')} 2주 동안 추천하지 않을게요` : val === '잘 먹음' ? `${josa(name,'을','를')} 다음에 더 자주 추천할게요` : '기록했어요');
+  }
+  function openRecipe(name) {
+    const r = RECIPES[name];
+    document.getElementById('r-title').textContent = name;
+    document.getElementById('r-meta').textContent = r.meta;
+    const pic = document.getElementById('r-pic'); pic.className = 'pic ' + r.tone; pic.dataset.food = r.food;
+    document.getElementById('r-groups').innerHTML = r.groups.map(g => `<span class="badge" data-component="Badge">${g}</span>`).join('');
+    document.getElementById('r-ings').innerHTML = r.ings.map(([a,b]) => `<li><span>${a}</span><span class="muted">${b}</span></li>`).join('');
+    document.getElementById('r-steps').innerHTML = r.steps.map(s => `<li>${s}</li>`).join('');
+    document.getElementById('r-kid').textContent = r.kid;
+    const ov = document.getElementById('recipe');
+    const host = document.querySelector(`[data-screen="${prototypeShell.getScreen()}"]`); if (ov.parentElement !== host) host.appendChild(ov);
+    const framed = document.body.classList.contains('sh-vp-390') || document.body.classList.contains('sh-vp-768');
+    if (framed) { Object.assign(ov.style, { position:'absolute', top: stage.scrollTop + 'px', left:0, right:0, bottom:'auto', height: stage.clientHeight + 'px' }); stage.style.overflowY = 'hidden'; }
+    else { Object.assign(ov.style, { position:'fixed', top:0, left:0, right:0, bottom:0, height:'auto' }); }
+    ov.hidden = false;
+  }
+  function closeRecipe() { document.getElementById('recipe').hidden = true; stage.style.overflowY = ''; }
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeRecipe(); });
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById({ connect: 'toast2', shop: 'toast-shop', favs: 'toast-favs' }[prototypeShell.getScreen()] || 'toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2200);
+  }
+  function fakeLoad() {
+    prototypeShell.setState('추천 만드는 중');
+    setTimeout(() => { prototypeShell.setState('Default'); onStateChange(); }, 1200);
+  }
+  function submitLogin() {
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>연결하는 중';
+    setTimeout(() => { btn.disabled = false; btn.textContent = '연결하기'; prototypeShell.setState('인증 코드'); }, 800);
+  }
+  function finishConnect() { prototypeShell.showScreen('today'); fakeLoad(); }
+
+  let avoids = ['땅콩', '새우', '메밀'];
+  function renderAvoid() {
+    document.getElementById('avoid-chips').innerHTML = avoids.map((a,i) =>
+      `<span class="chip" data-component="Badge">${a}<button aria-label="${a} 빼기" onclick="removeAvoid(${i})">✕</button></span>`).join('');
+    document.getElementById('avoid-summary').textContent = avoids.length ? avoids.join(', ') : '아직 없어요';
+  }
+  function addAvoid() {
+    const inp = document.getElementById('avoid-input');
+    const v = inp.value.trim(); if (!v) return;
+    v.split(/[,\s]+/).filter(Boolean).forEach(x => { if (!avoids.includes(x)) avoids.push(x); });
+    inp.value = ''; renderAvoid(); prototypeShell.setState('Default');
+  }
+  function removeAvoid(i) { avoids.splice(i, 1); renderAvoid(); if (!avoids.length) prototypeShell.setState('비어 있음'); }
+  /* ── date picker: week strip, today = 11/17(화) ── */
+  const TODAY = new Date(2026, 10, 17);
+  let selDay = new Date(TODAY);
+  let weekStart = new Date(2026, 10, 16);
+  const DOW = ['일','월','화','수','목','금','토'];
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const A = s => `<span class="avoided">${s}</span>`;
+  const DC = {
+    '2026-11-09': ['바나나, 우유', `백미밥, 시금치된장국, ${A('돼지고기')}장조림, 숙주나물, 배추김치`, '고구마맛탕'],
+    '2026-11-10': ['사과, 요거트', `잡곡밥, 감자국, ${A('삼치')}구이, 오이무침, 깍두기`, '떡'],
+    '2026-11-11': ['시리얼, 우유', `카레라이스, 미소된장국, ${A('단무지')}`, '바나나'],
+    '2026-11-12': ['배, 두유', `백미밥, 콩나물국, ${A('닭')}불고기, 브로콜리무침, 배추김치`, '감자전'],
+    '2026-11-13': ['귤', `잡곡밥, 어묵국, ${A('달걀')}말이, 무나물, 깍두기`, '옥수수빵, 우유'],
+    '2026-11-16': ['바나나, 유기농요거트', `백미밥, ${A('미역')}국, ${A('소고기')}당근볶음, 청포묵무침, 배추김치`, '스크램블에그'],
+    '2026-11-17': ['씨리얼, 유기농우유', `잡곡밥, ${A('두부')}장국, ${A('생선')}까스, ${A('양배추')}새콤무침, 깍두기`, '잼샌드위치'],
+    '2026-11-18': ['채썬오이, 플레인요거트', `${A('소고기')}버섯밥, 물만둣국, 깻잎나물, 배추김치`, '우동'],
+    '2026-11-19': ['브로콜리죽', `잡곡밥, 얼갈이된장국, ${A('오리')}파프리카볶음, 잔멸치조림, 깍두기`, '찐단호박, 두유'],
+    '2026-11-20': ['바나나', `백미밥, ${A('미역')}국, ${A('돼지')}갈비찜, 잡채, 배추김치`, '생일케이크, 유기농우유'],
+  };
+  const FED = { '2026-11-16': true, '2026-11-13': true, '2026-11-12': true };
+  const PHOTO = { '2026-11-16': true, '2026-11-17': true, '2026-11-18': true };
+  const sameDay = (a, b) => iso(a) === iso(b);
+  function dayKind(d = selDay) {
+    const w = d.getDay();
+    if (w === 0 || w === 6) return 'off';
+    return DC[iso(d)] ? 'dc' : 'missing';
+  }
+  function renderWeek() {
+    const wrap = document.getElementById('week-days'); let html = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart); d.setDate(d.getDate() + i);
+      const cls = ['day', d.getDay() % 6 === 0 ? 'wkend' : '', sameDay(d, TODAY) ? 'is-today' : '', DC[iso(d)] ? 'has-dc' : '', FED[iso(d)] ? 'has-fb' : ''].join(' ');
+      html += `<button class="${cls}" aria-pressed="${sameDay(d, selDay)}" aria-label="${d.getMonth()+1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일${sameDay(d,TODAY)?' 오늘':''}" onclick="selectDay('${iso(d)}')">
+        <span class="dow">${sameDay(d, TODAY) ? '오늘' : DOW[d.getDay()]}</span><span class="dnum">${d.getDate()}</span><span class="mark"></span></button>`;
+    }
+    wrap.innerHTML = html;
+  }
+  function shiftWeek(n) { weekStart.setDate(weekStart.getDate() + 7 * n); renderWeek(); }
+  function selectDay(s) {
+    const [y, m, d] = s.split('-').map(Number); selDay = new Date(y, m - 1, d);
+    const st = prototypeShell.getState();
+    if (dayKind() === 'off') prototypeShell.setState('어린이집 쉬는 날');
+    else if (st === '어린이집 쉬는 날' || !sameDay(selDay, TODAY)) prototypeShell.setState('Default');
+    syncDay(true);
+  }
+  function syncDay(fromPick) {
+    const today = sameDay(selDay, TODAY);
+    const diff = Math.round((selDay - TODAY) / 864e5);
+    const rel = diff === 0 ? '' : diff === -1 ? ' · 어제' : diff === 1 ? ' · 내일' : '';
+    document.getElementById('day-label').textContent = `${selDay.getMonth()+1}월 ${selDay.getDate()}일 ${DOW[selDay.getDay()]}요일`;
+    document.getElementById('day-rel').textContent = today ? '' : diff === -1 ? '어제' : diff === 1 ? '내일' : diff < 0 ? `${-diff}일 전` : `${diff}일 뒤`;
+    document.getElementById('day-time').hidden = !today;
+    document.getElementById('today-app').classList.toggle('not-today', !today);
+    const note = document.getElementById('day-note');
+    note.hidden = today;
+    if (diff < 0) note.innerHTML = `📝 <span>지난 끼니예요. 먹인 반응을 지금 눌러도 돼요.</span>`;
+    else if (diff > 0) note.innerHTML = `🗓️ <span>미리 보는 추천이에요. 장 볼 때 참고하세요.</span>`;
+    if (!today) note.innerHTML += `<button class="btn btn-ghost btn-sm" data-component="Button" onclick="goToday()">오늘로</button>`;
+    // daycare card
+    const k = dayKind(), dc = DC[iso(selDay)];
+    document.getElementById('snack-sub').textContent = k === 'off' ? '오후 3시쯤 · 점심과 저녁 사이에 조금만' : '하원 후 · 저녁 먹기 1시간 반 전까지 조금만';
+    document.getElementById('off-sub').textContent = today ? '오늘은 어린이집에 가지 않아요' : '이날은 어린이집에 가지 않아요';
+    const sub = document.getElementById('dc-sub'), card = document.getElementById('dc-card');
+    if (k === 'dc') {
+      const up = UPLOADED[iso(selDay)];
+      sub.textContent = up ? '올린 식단표에서 읽었어요. 집에서 챙길 건 없어요.' : '키즈노트에서 가져왔어요. 집에서 챙길 건 없어요.';
+      card.innerHTML = `${PHOTO[iso(selDay)] ? '<div class="pic t3 hero" data-food="🍱" aria-label="어린이집 점심 사진"></div>' : up ? '' : '<div class="xs muted">사진은 아직 안 올라왔어요</div>'}
+        <dl class="col gap-2" style="margin:0">
+          <div class="dc-line"><dt>오전간식</dt><dd>${dc[0]}</dd></div>
+          <div class="dc-line"><dt>점심</dt><dd>${dc[1]}</dd></div>
+          <div class="dc-line"><dt>오후간식</dt><dd>${dc[2]}</dd></div>
+        </dl>
+        <span class="xs muted">색으로 표시한 재료는 집 아침·저녁에서 겹치지 않게 뺐어요.</span>`;
+    } else if (k === 'missing') {
+      sub.textContent = '어린이집 식단이 아직 없어요.';
+      card.innerHTML = `<div class="empty" data-component="Empty" style="padding:8px 4px">
+          <div class="empty-icon">🗒️</div>
+          <span class="small" style="font-weight:600">이날 식단이 키즈노트에 아직 안 올라왔어요</span>
+          <span class="xs muted">식단표 사진이 있으면 올려 주세요. 없어도 집 끼니는 추천해 드려요.</span>
+          <a class="btn btn-sm" href="#upload" data-component="Button" style="margin-top:4px">📷 식단표 올리기</a>
+        </div>`;
+    }
+    renderWeek(); render(); markSlide(currentSlide());
+    if (fromPick) goSlide(today ? nowSlide() : 0, false);
+  }
+  function goToday() { selDay = new Date(TODAY); weekStart = new Date(2026, 10, 16); selectDay(iso(TODAY)); }
+  function currentSlide() { const el = document.getElementById('slides'); return el.clientWidth ? Math.round(el.scrollLeft / el.clientWidth) : 0; }
+
+  /* ── upload ── */
+  function setUploadMode(m) {
+    document.getElementById('seg-photo').setAttribute('aria-pressed', m === 'photo');
+    document.getElementById('seg-link').setAttribute('aria-pressed', m === 'link');
+    document.getElementById('mode-photo').hidden = m !== 'photo';
+    document.getElementById('mode-link').hidden = m !== 'link';
+  }
+  function readMenu() {
+    prototypeShell.setState('읽는 중');
+    setTimeout(() => prototypeShell.setState('읽은 결과'), 1300);
+  }
+  const UPLOADED = {};
+  function saveUpload() {
+    ['23','24','25','26','27'].forEach(d => UPLOADED['2026-11-' + d] = true);
+    Object.assign(DC, {
+      '2026-11-23': ['사과, 우유', `현미밥, 감자국, ${A('제육')}볶음, ${A('시금치')}나물, 배추김치`, '떡'],
+      '2026-11-24': ['바나나', `잡곡밥, ${A('콩나물')}국, ${A('삼치')}구이, 무생채, 깍두기`, '감자전'],
+      '2026-11-25': ['요거트', `카레라이스, 맑은 ${A('어묵')}국, 단무지`, '찐 고구마'],
+      '2026-11-26': ['귤', `백미밥, 북엇국, ${A('닭')}볶음탕, 청경채무침, 배추김치`, '옥수수빵'],
+      '2026-11-27': ['시리얼, 우유', `짜장밥, ${A('달걀')}국, 오이무침, 깍두기`, '군만두'],
+    });
+    prototypeShell.showScreen('today');
+    selDay = new Date(2026, 10, 23); weekStart = new Date(2026, 10, 23);
+    setTimeout(() => { syncDay(true); goSlide(1, false); showToast('식단표를 저장했어요. 23일~27일 추천에 써요'); });
+  }
+
+  /* ── bottom tab bar ── */
+  const TABS = [['today','🍚','오늘'],['shop','🛒','장보기'],['favs','😋','잘 먹은 메뉴']];
+  function renderTabbars() {
+    document.querySelectorAll('[data-tabbar]').forEach(nav => {
+      nav.innerHTML = TABS.map(([s,e,l]) => `<a href="#${s}" ${nav.dataset.tabbar === s ? 'aria-current="page"' : ''}><span>${e}</span><span>${l}</span></a>`).join('');
+    });
+  }
+
+  /* ── shopping list: 추천된 집 끼니 재료를 모아요 ── */
+  const PANTRY = ['국간장','간장','참기름','깨','물','된장','멸치 육수','부침가루','잡곡밥','밥'];
+  const CAT = { '고기·생선·달걀': ['소고기 양지','다진 소고기','닭안심','달걀'], '채소': ['무','애호박','감자','당근','시금치','브로콜리','콩나물','애호박·당근','마른 미역'],
+                '과일': ['바나나','사과','귤'], '우유·유제품': ['우유','플레인 요거트','아기 치즈'], '곡류·기타': ['오트밀','식빵','찐 고구마'] };
+  let range = 'tomorrow';
+  const got = new Set();
+  function setRange(r) {
+    range = r;
+    document.getElementById('rng-tomorrow').setAttribute('aria-pressed', r === 'tomorrow');
+    document.getElementById('rng-week').setAttribute('aria-pressed', r === 'week');
+    renderShop();
+  }
+  function shopDays() {
+    const n = range === 'tomorrow' ? 1 : 5;
+    return [...Array(n)].map((_, i) => { const d = new Date(TODAY); d.setDate(d.getDate() + 1 + i); return d; });
+  }
+  function shopItems() {
+    const items = {}; let meals = 0;
+    for (const d of shopDays()) {
+      const off = d.getDay() % 6 === 0;
+      for (const meal of off ? ['breakfast','lunch','snack','dinner'] : ['breakfast','snack','dinner']) {
+        meals++;
+        const lo = meal === 'dinner' ? leftoverOf(d) : null;
+        for (const [i, n] of dishesFor(meal, d)) {
+          if (lo && i === 1) continue;
+          for (const [ing, amt] of RECIPES[n].ings) {
+            if (PANTRY.includes(ing)) continue;
+            (items[ing] ||= { amt, uses: [] }).uses.push(`${d.getDate()}일 ${n}`);
+          }
+        }
+      }
+    }
+    return { items, meals };
+  }
+  function renderShop() {
+    const { items, meals } = shopItems();
+    const names = Object.keys(items); const left = names.filter(n => !got.has(n)).length;
+    document.getElementById('shop-count').textContent = `살 것 ${left}개 / 전체 ${names.length}개`;
+    document.getElementById('shop-meals').textContent = `집 끼니 ${meals}번 기준`;
+    document.getElementById('shop-bar').style.width = names.length ? `${(names.length - left) / names.length * 100}%` : '0';
+    document.getElementById('shop-pantry').textContent = '간장, 참기름, 된장, 밥처럼 집에 늘 있는 재료는 뺐어요.';
+    let html = '';
+    for (const [cat, list] of Object.entries(CAT)) {
+      const here = names.filter(n => list.includes(n)); if (!here.length) continue;
+      html += `<div class="shop-group col"><h3>${cat}</h3>${here.map(n => {
+        const it = items[n]; const uses = [...new Set(it.uses)];
+        return `<label class="shop-item ${got.has(n) ? 'got' : ''}" data-component="Checkbox">
+          <input type="checkbox" ${got.has(n) ? 'checked' : ''} onchange="toggleGot('${n}')">
+          <span class="col"><span class="nm">${n}</span><span class="for">${uses.slice(0, 2).join(', ')}${uses.length > 2 ? ` 외 ${uses.length - 2}개` : ''}</span></span>
+          <span class="amt">${uses.length > 1 ? `${uses.length}번 써요` : it.amt}</span></label>`; }).join('')}</div>`;
+    }
+    document.getElementById('shop-list').innerHTML = html;
+    if (prototypeShell.getScreen() === 'shop') prototypeShell.setState(names.length && !left ? '다 챙김' : 'Default');
+  }
+  function toggleGot(n) { got.has(n) ? got.delete(n) : got.add(n); renderShop(); }
+  function resetShop() { got.clear(); renderShop(); }
+
+  /* ── 잘 먹은 메뉴 / 쉬는 메뉴 ── */
+  const FAV_BASE = [['바나나 오트밀', 4, '11월 16일'], ['애호박 달걀전', 3, '11월 12일'], ['소고기무국', 2, '11월 16일'], ['귤', 2, '11월 13일']];
+  const REST_BASE = [['시금치나물', '11월 26일']];
+  const MEAL_KO = { breakfast: '아침', lunch: '점심', snack: '간식', dinner: '저녁' };
+  function favs() {
+    const list = FAV_BASE.map(([n, c, l]) => ({ n, c, l }));
+    for (const [n, v] of Object.entries(feedback)) if (v === '잘 먹음') {
+      const f = list.find(x => x.n === n); if (f) { f.c++; f.l = '오늘'; } else list.unshift({ n, c: 1, l: '오늘' });
+    }
+    return list.filter(f => !restDismissed.has('fav:' + f.n));
+  }
+  const restDismissed = new Set();
+  function restingList() {
+    const list = REST_BASE.filter(([n]) => !restDismissed.has(n)).map(([n, u]) => ({ n, u }));
+    for (const [n, v] of Object.entries(feedback)) if (v === '남김' && !list.find(x => x.n === n)) list.unshift({ n, u: '12월 1일' });
+    return list;
+  }
+  const resting = n => restingList().some(x => x.n === n);
+  function slotOf(name) {
+    for (const meal of ['dinner', 'breakfast', 'snack', 'lunch']) {
+      const i = MEALS[meal].slots.findIndex(p => p.includes(name)); if (i >= 0) return [meal, i];
+    }
+  }
+  function renderFavs() {
+    const list = favs();
+    document.getElementById('fav-list').innerHTML = list.map(f => {
+      const r = RECIPES[f.n]; const s = slotOf(f.n);
+      return `<div class="fav">
+        <div class="pic ${r.tone}" data-food="${r.food}" aria-hidden="true"></div>
+        <div class="col grow gap-1">
+          <span class="dish-name">${f.n}</span>
+          <span class="xs muted"><span class="count">😋 ${f.c}번</span> · 마지막 ${f.l} · ${MEAL_KO[s[0]]}</span>
+          <div class="dish-actions">
+            <button class="btn btn-soft btn-sm" data-component="Button" onclick="useFav('${f.n}')">오늘 ${MEAL_KO[s[0]]}에 넣기</button>
+            <button class="btn btn-ghost btn-sm" data-component="Button" onclick="openRecipeFrom('${f.n}')">📖 레시피</button>
+          </div>
+        </div></div>`;
+    }).join('');
+    const rest = restingList();
+    document.getElementById('rest-wrap').hidden = !rest.length;
+    document.getElementById('rest-list').innerHTML = rest.map(x => `<div class="row between">
+        <span class="col"><span style="font-weight:600">😣 ${x.n}</span><span class="xs muted">${x.u}까지 추천하지 않아요</span></span>
+        <button class="btn btn-ghost btn-sm" data-component="Button" onclick="unrest('${x.n}')">다시 추천받기</button></div>`).join('<hr class="sep" data-component="Separator">');
+    if (prototypeShell.getScreen() === 'favs' && prototypeShell.getState() !== '비어 있음' && !list.length) prototypeShell.setState('비어 있음');
+  }
+  function unrest(n) { restDismissed.add(n); if (feedback[n] === '남김') feedback[n] = undefined; renderFavs(); showToast(`${josa(n,'을','를')} 다시 추천할게요`); }
+  function useFav(n) {
+    const [meal, i] = slotOf(n); const pool = MEALS[meal].slots[i];
+    const idx = pool.indexOf(n); const len = pool.length;
+    pick[meal][i] = (((idx - seedOf(TODAY)) % len) + len) % len;
+    selDay = new Date(TODAY); weekStart = new Date(2026, 10, 16);
+    if (meal === 'dinner' && i === 1) leftoverOff[iso(TODAY)] = true;
+    location.hash = 'today';
+    setTimeout(() => { goSlide(SLIDE[meal], false); showToast(`오늘 ${MEAL_KO[meal]}에 ${josa(n,'을','를')} 넣었어요`); }, 50);
+  }
+  function openRecipeFrom(n) { openRecipe(n); }
+  addEventListener('hashchange', () => setTimeout(() => {
+    const s = prototypeShell.getScreen();
+    document.querySelector('.sh-stage').scrollTop = 0; scrollTo(0, 0);
+    if (s === 'shop') renderShop();
+    if (s === 'favs') renderFavs();
+  }));
+  document.addEventListener('change', e => { if (e.target.id === 'sh-screen') setTimeout(() => { renderShop(); renderFavs(); syncDay(); }); });
+
+  /* swipe carousel: start on the meal for the current time, tabs and dots follow the swipe */
+  /* 시간 기준(가정): 오전 10시 전 아침, 오후 3시 전 점심, 오후 5시 전 간식, 그 뒤 저녁 */
+  function nowSlide() { const s = prototypeShell.getState(); return s === '저녁에 열었을 때' ? 3 : s === '하원 후에 열었을 때' ? 2 : 0; }
+  function goSlide(i, smooth = true) {
+    const el = document.getElementById('slides');
+    el.scrollTo({ left: i * el.clientWidth, behavior: smooth ? 'smooth' : 'instant' });
+    markSlide(i);
+  }
+  function markSlide(i) {
+    document.querySelectorAll('.tabs button').forEach((b, k) => { b.setAttribute('aria-selected', k === i); b.classList.toggle('is-now', k === nowSlide()); });
+    document.querySelectorAll('.dots span').forEach((d, k) => d.classList.toggle('on', k === i));
+    fitSlides(i);
+  }
+  /* 슬라이드 높이는 지금 보이는 끼니에 맞춰요 (짧은 아침 아래가 비지 않게) */
+  function fitSlides(i = currentSlide()) {
+    const el = document.getElementById('slides'); const s = el.children[i]; if (!s) return;
+    el.style.height = s.scrollHeight + 'px';
+  }
+  let scrollTimer;
+  document.getElementById('slides').addEventListener('scroll', e => {
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => markSlide(Math.round(e.target.scrollLeft / e.target.clientWidth)), 60);
+  });
+  function onStateChange() {
+    if (prototypeShell.getScreen() !== 'today') return;
+    const st = prototypeShell.getState();
+    if (st === '어린이집 쉬는 날' && dayKind() !== 'off') { selDay = new Date(2026, 10, 21); weekStart = new Date(2026, 10, 16); }
+    else if (st !== '어린이집 쉬는 날' && dayKind() === 'off') { selDay = new Date(TODAY); weekStart = new Date(2026, 10, 16); }
+    syncDay(true);
+  }
+  document.addEventListener('change', e => { if (e.target.id === 'sh-state') setTimeout(onStateChange); });
+  addEventListener('hashchange', () => setTimeout(() => {
+    if (prototypeShell.getScreen() !== 'today') return;
+    if (dayKind() === 'off') prototypeShell.setState('어린이집 쉬는 날');
+    syncDay(true);
+  }));
+  setTimeout(() => { renderTabbars(); syncDay(true); renderShop(); renderFavs(); });
+</script>
+
+<script>
+  const stage = document.querySelector('.sh-stage');
+  const screens = [...stage.querySelectorAll('[data-screen]')];
+  const screenSelect = document.getElementById('sh-screen');
+  const stateSelect = document.getElementById('sh-state');
+  const vpBtn = document.getElementById('sh-vp');
+  const themeCtl = document.getElementById('sh-theme');
+  const themeBtns = [...themeCtl.querySelectorAll('button')];
+  let current = null;
+  let currentStates = [];
+
+  screens.forEach(s => {
+    const option = document.createElement('option');
+    option.textContent = s.dataset.title || s.dataset.screen;
+    option.value = s.dataset.screen;
+    screenSelect.append(option);
+  });
+  screenSelect.onchange = () => show(screenSelect.value);
+
+  function show(slug) {
+    current = screens.find(s => s.dataset.screen === slug) || screens[0];
+    screens.forEach(s => s.hidden = s !== current);
+    screenSelect.value = current.dataset.screen;
+    history.replaceState(null, '', '#' + current.dataset.screen);
+    buildStates();
+  }
+
+  function buildStates() {
+    const declared = (current.dataset.states || '').split(',').map(x => x.trim()).filter(Boolean);
+    currentStates = ['Default', ...declared.filter(name => name !== 'Default')];
+    stateSelect.innerHTML = '';
+    currentStates.forEach(name => {
+      const option = document.createElement('option');
+      option.textContent = name;
+      option.value = name;
+      stateSelect.append(option);
+    });
+    applyState('Default');
+  }
+
+  function applyState(name) {
+    const active = currentStates.includes(name) ? name : 'Default';
+    current.querySelectorAll('[data-when]').forEach(el => {
+      el.hidden = !el.dataset.when.split(',').map(x => x.trim()).includes(active);
+    });
+    stateSelect.value = active;
+  }
+  stateSelect.onchange = () => applyState(stateSelect.value);
+
+  window.prototypeShell = {
+    showScreen: show,
+    setState: applyState,
+    getScreen: () => current?.dataset.screen,
+    getState: () => stateSelect.value
+  };
+
+  const VPS = ['full', '390', '768'];
+  let vp = VPS.find(v => document.body.classList.contains('sh-vp-' + v)) || 'full';
+  function applyVp() {
+    VPS.forEach(v => document.body.classList.toggle('sh-vp-' + v, v === vp && v !== 'full'));
+    vpBtn.textContent = 'vp: ' + vp + ' (m)';
+    vpBtn.classList.toggle('on', vp !== 'full');
+  }
+  vpBtn.onclick = () => { vp = VPS[(VPS.indexOf(vp) + 1) % VPS.length]; applyVp(); };
+  applyVp();
+
+  const hasDark = [...document.styleSheets].some(sheet => {
+    try {
+      return [...sheet.cssRules].some(rule => (rule.selectorText || '')
+        .split(',').some(part => /\.sh-theme-dark$/.test(part.trim())));
+    } catch { return false }
+  });
+  let dark = false;
+  function applyTheme() {
+    document.documentElement.classList.toggle('sh-theme-dark', dark);
+    document.body.classList.toggle('sh-theme-dark', dark);
+    themeBtns.forEach(b => b.classList.toggle('on', (b.dataset.theme === 'dark') === dark));
+  }
+  themeCtl.hidden = !hasDark;
+  themeBtns.forEach(b => b.onclick = () => { dark = b.dataset.theme === 'dark'; applyTheme(); });
+  applyTheme();
+
+  addEventListener('keydown', e => {
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+    const i = screens.indexOf(current);
+    if (e.key === 'ArrowRight') show(screens[(i + 1) % screens.length].dataset.screen);
+    if (e.key === 'ArrowLeft') show(screens[(i - 1 + screens.length) % screens.length].dataset.screen);
+    if (e.key === 'm') vpBtn.click();
+    if (e.key === 't' && !themeCtl.hidden) { dark = !dark; applyTheme(); }
+  });
+
+  addEventListener('hashchange', () => show(location.hash.slice(1)));
+  show(location.hash.slice(1));
+  render();
+  renderAvoid();
+</script>
+</body>
