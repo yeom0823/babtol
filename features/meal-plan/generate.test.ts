@@ -27,10 +27,13 @@ const okPlan = (): DayPlan => ({
     })
   ),
   snack: meal(dish("귤", { recipe: { ...dish("x").recipe, ingredients: withIngredients(["귤"]) } })),
+  // 저녁은 밥·국·반찬 2가지 한 상(가정 A2).
   dinner: meal(
+    dish("미역국", { recipe: { ...dish("x").recipe, ingredients: withIngredients(["미역"]) } }),
     dish("애호박전", {
       recipe: { ...dish("x").recipe, ingredients: withIngredients(["달걀", "애호박"]) },
-    })
+    }),
+    dish("무나물", { recipe: { ...dish("x").recipe, ingredients: withIngredients(["무"]) } })
   ),
 });
 

@@ -17,6 +17,9 @@ export const gatewayModel: JsonModel = async ({ system, user }) => {
     model: MODEL_ID,
     system,
     prompt: user,
+    // 이 모델은 기본값으로 추론 글을 2~3만 자 써서 한 번에 40초 넘게 걸린다(끼니 바꾸기 한 번에 최대 2.7분).
+    // 추론을 끄면 2초 안팎에 같은 형식으로 답한다. 규칙은 코드가 검사하고 어기면 다시 받는다.
+    reasoning: "none",
     abortSignal: AbortSignal.timeout(170_000),
     maxRetries: 1,
   });

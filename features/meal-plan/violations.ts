@@ -8,7 +8,8 @@ export type ViolationRule =
   | "kid-note"
   | "choking"
   | "unsafe"
-  | "breakfast-time";
+  | "breakfast-time"
+  | "dinner-shape";
 export type Violation = { meal: MealKey; dish: string; rule: ViolationRule; detail: string };
 
 export type PlanContext = {
@@ -31,6 +32,11 @@ const textOf = (d: HomeDish) =>
 export function findViolations(plan: DayPlan, ctx: PlanContext): Violation[] {
   const out: Violation[] = [];
   const daycare = new Set(ctx.daycareIngredients.map(canonicalIngredient));
+
+  // 저녁은 밥·국·반찬 2가지 한 상이다(가정 A2). 밥을 기본으로 표시하지 않았어도 세 가지 이상이면 받는다.
+  if (plan.dinner && plan.dinner.dishes.filter((d) => !d.basic).length < 3) {
+    out.push({ meal: "dinner", dish: "저녁 한 상", rule: "dinner-shape", detail: "밥, 국, 반찬 2가지를 모두 넣어 주세요" });
+  }
 
   for (const [meal, home] of Object.entries(plan) as [MealKey, NonNullable<DayPlan[MealKey]>][]) {
     for (const dish of home.dishes) {

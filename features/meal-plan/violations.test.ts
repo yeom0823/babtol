@@ -94,5 +94,17 @@ test("아침 메뉴는 조리 시간이 10분 이하여야 한다 (AC18)", () =>
 test("기본으로 곁들이는 밥은 검사하지 않는다", () => {
   const rice = dish({ name: "잡곡밥", basic: true });
   rice.recipe.kidNote = "";
-  expect(findViolations({ dinner: { why: "", dishes: [rice] } }, ctx)).toEqual([]);
+  expect(findViolations({ dinner: { why: "", dishes: [rice] } }, ctx).filter((v) => v.dish === "잡곡밥")).toEqual([]);
+});
+
+test("저녁은 밥·국·반찬 2가지 한 상이어야 한다 (가정 A2)", () => {
+  const soupOnly = { dinner: { why: "", dishes: [dish({ name: "미역국" })] } };
+  expect(findViolations(soupOnly, ctx).map((x) => x.rule)).toContain("dinner-shape");
+  const full = {
+    dinner: {
+      why: "",
+      dishes: [dish({ name: "밥", basic: true }), dish({ name: "미역국" }), dish({ name: "애호박전" }), dish({ name: "무나물" })],
+    },
+  };
+  expect(findViolations(full, ctx).map((x) => x.rule)).not.toContain("dinner-shape");
 });

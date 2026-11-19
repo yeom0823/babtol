@@ -52,7 +52,8 @@ const meal = (...d: HomeDish[]) => ({ why: "골랐어요.", dishes: d });
 const fullPlan = (tag = ""): DayPlan => ({
   breakfast: meal(dish(`바나나 오트밀${tag}`, ["오트밀", "우유", "바나나"])),
   snack: meal(dish(`귤${tag}`, ["귤"])),
-  dinner: meal(dish(`애호박전${tag}`, ["달걀", "애호박"])),
+  // 저녁은 밥·국·반찬 2가지 한 상(가정 A2).
+  dinner: meal(dish(`미역국${tag}`, ["미역"]), dish(`애호박전${tag}`, ["달걀", "애호박"]), dish(`무나물${tag}`, ["무"])),
 });
 
 function countingModel(make: (n: number, user: string) => unknown) {
@@ -93,28 +94,28 @@ test("다른 아침 보기는 아침만 바꾸고 나머지 끼니는 그대로 
   const plan = (await loadPlan("2026-11-17"))!;
   expect(plan.breakfast?.dishes[0].name).toBe("달걀 치즈 토스트");
   expect(plan.snack?.dishes[0].name).toBe("귤");
-  expect(plan.dinner?.dishes[0].name).toBe("애호박전");
+  expect(plan.dinner?.dishes.map((d) => d.name)).toEqual(["미역국", "애호박전", "무나물"]);
 });
 
 test("이것만 바꾸기는 그 메뉴 하나만 바꾼다 (AC6)", async () => {
-  const dinner = meal(dish("밥", ["쌀"]), dish("소고기무국", ["소고기", "무"]), dish("애호박전", ["달걀", "애호박"]));
+  const dinner = meal(dish("밥", ["쌀"]), dish("소고기무국", ["소고기", "무"]), dish("애호박전", ["달걀", "애호박"]), dish("무나물", ["무"]));
   dinner.dishes[0].basic = true;
   const { model } = countingModel((n) =>
     n === 1
       ? { ...fullPlan(), dinner }
-      : { dinner: meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("달걀찜", ["달걀"])) }
+      : { dinner: meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("달걀찜", ["달걀"]), dish("무나물", ["무"])) }
   );
   await buildPlan("2026-11-17", model);
   await swapDish("2026-11-17", "dinner", 1, model);
   const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
-  expect(names).toEqual(["밥", "미역국", "애호박전"]);
+  expect(names).toEqual(["밥", "미역국", "애호박전", "무나물"]);
 });
 
 test("빈 식품군 채우기는 그 식품군이 들어간 끼니로 바꾼다 (AC13)", async () => {
   const noFruit: DayPlan = {
     breakfast: meal(dish("달걀 토스트", ["식빵", "달걀", "우유"])),
     snack: meal(dish("고구마", ["고구마"])),
-    dinner: meal(dish("애호박전", ["달걀", "애호박"])),
+    dinner: meal(dish("미역국", ["미역"]), dish("애호박전", ["달걀", "애호박"]), dish("무나물", ["무"])),
   };
   const { model, calls } = countingModel((n) =>
     n === 1 ? noFruit : { snack: meal(dish("바나나", ["바나나"])) }
@@ -142,12 +143,12 @@ test("잘 먹은 메뉴를 오늘 그 끼니의 해당 칸에 넣는다 (AC9)", 
   await savePlan("2026-11-12", {
     dinner: meal(soup),
   });
-  const dinner = meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("애호박전", ["달걀", "애호박"]));
+  const dinner = meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("애호박전", ["달걀", "애호박"]), dish("무나물", ["무"]));
   dinner.dishes[0].basic = true;
   const { model } = countingModel(() => ({ ...fullPlan(), dinner }));
   await insertFavorite("2026-11-17", "dinner", "소고기무국", model);
   const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
-  expect(names).toEqual(["밥", "소고기무국", "애호박전"]);
+  expect(names).toEqual(["밥", "소고기무국", "애호박전", "무나물"]);
 });
 
 test("잘 먹음을 누른 메뉴는 추천에서 바뀌어 빠져도 오늘 끼니에 넣을 수 있다 (AC9)", async () => {
@@ -169,10 +170,10 @@ test("전날 2~3회 분량 국을 끓였으면 다음 날 저녁 국 자리에 �
   await savePlan("2026-11-16", { dinner: meal(rice, soup, dish("애호박전", ["달걀", "애호박"])) });
   const { model } = countingModel(() => ({
     ...fullPlan(),
-    dinner: meal(rice, dish("미역국", ["미역"]), dish("시금치나물", ["시금치"])),
+    dinner: meal(rice, dish("미역국", ["미역"]), dish("시금치나물", ["시금치"]), dish("애호박전", ["달걀", "애호박"])),
   }));
   await buildPlan("2026-11-17", model);
   const dinner = (await loadPlan("2026-11-17"))!.dinner!.dishes;
-  expect(dinner.map((d) => d.name)).toEqual(["밥", "소고기무국", "시금치나물"]);
+  expect(dinner.map((d) => d.name)).toEqual(["밥", "소고기무국", "시금치나물", "애호박전"]);
   expect(dinner[1].leftover).toBe(true);
 });
