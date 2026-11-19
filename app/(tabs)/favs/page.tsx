@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { listFavorites, listResting } from "@/features/meal-feedback";
 import type { MealKey } from "@/features/meal-plan";
 import { findDishByName } from "@/features/meal-plan/server";
@@ -8,6 +9,8 @@ import { FavoriteList } from "./favorite-list";
 import { RestingList } from "./resting-list";
 
 export default async function FavoritesPage() {
+  // 로컬 파일을 요청 때마다 읽으므로 빌드 때 굳지 않게 동적으로 그린다.
+  await connection();
   const today = toISODate(new Date());
   const favorites = await listFavorites(today);
   const items = await Promise.all(

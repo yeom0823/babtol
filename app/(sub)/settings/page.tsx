@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { ChevronRightIcon } from "lucide-react";
 
@@ -14,6 +15,8 @@ const KIDSNOTE_NOTE = {
 } as const;
 
 export default async function SettingsPage() {
+  // 로컬 파일을 요청 때마다 읽으므로 빌드 때 굳지 않게 동적으로 그린다.
+  await connection();
   const status = await connectionStatus();
   const avoid = await listAvoid();
   return (

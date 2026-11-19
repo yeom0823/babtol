@@ -13,7 +13,7 @@ function dataFile(): string {
 
 async function readAll(): Promise<Record<string, unknown>> {
   try {
-    return JSON.parse(await readFile(dataFile(), "utf8"));
+    return JSON.parse(await readFile(/*turbopackIgnore: true*/ dataFile(), "utf8"));
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return {};
     throw e;

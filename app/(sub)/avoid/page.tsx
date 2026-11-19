@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { XIcon } from "lucide-react";
 
 import { BackLink } from "@/components/back-link";
@@ -17,6 +18,8 @@ import { listAvoid } from "@/features/family-settings";
 import { addAvoidAction, removeAvoidAction } from "./actions";
 
 export default async function AvoidPage() {
+  // 로컬 파일을 요청 때마다 읽으므로 빌드 때 굳지 않게 동적으로 그린다.
+  await connection();
   const foods = await listAvoid();
   return (
     <>
