@@ -82,6 +82,17 @@ test("꿀, 날것, 덜 익힌 달걀을 쓰면 위반이다 (AC17)", () => {
   expect(findViolations(plan([runny]), ctx).map((x) => x.rule)).toContain("unsafe");
 });
 
+test("꿀을 넣지 말라는 문장이나 횟수 표현은 위반이 아니다", () => {
+  const safe = dish({
+    name: "호박고구마조림",
+    recipe: {
+      ...dish({ name: "x" }).recipe,
+      steps: ["꿀 대신 사과즙을 조금 넣어요.", "하루 1회 분량으로 덜어요.", "덜 익지 않게 충분히 조려요."],
+    },
+  });
+  expect(findViolations(plan([safe]), ctx).map((x) => x.rule)).not.toContain("unsafe");
+});
+
 test("아침 메뉴는 조리 시간이 10분 이하여야 한다 (AC18)", () => {
   const slow = dish({ name: "소고기죽" });
   slow.recipe.minutes = 25;

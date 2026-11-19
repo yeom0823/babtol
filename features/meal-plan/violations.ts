@@ -23,7 +23,12 @@ export type PlanContext = {
 /** 통으로 주면 목에 걸릴 수 있는 재료(AC17). */
 const CHOKING = /포도|방울토마토|견과|땅콩|아몬드|호두|캐슈|잣|떡|소시지|메추리알|체리/;
 const CUT_WORDS = /자르|잘라|썰|다지|다져|으깨|찢|갈아|반으로|등분|조각|쪼개/;
-const UNSAFE = /꿀|날달걀|생달걀|날것|회|반숙|덜 익/;
+// "회" 한 글자는 "1회", "회색"에도 걸려서 회 요리 이름으로만 찾는다. 꿀고구마는 고구마 품종이다.
+const UNSAFE = /꿀(?!고구마)|날달걀|생달걀|날것|육회|생선회|반숙|덜 익/;
+// "꿀은 넣지 않아요", "덜 익지 않게"처럼 쓰지 말라는 문장은 위반으로 보지 않는다.
+const NEGATED = /않|말고|말아|없이|대신|금지|빼고|피해/;
+const affirmative = (texts: string[]) =>
+  texts.flatMap((t) => t.split(/(?<=[.!?。])\s+|,\s*/)).filter((s) => !NEGATED.test(s)).join(" ");
 
 const textOf = (d: HomeDish) =>
   [d.name, ...d.recipe.ingredients.map((i) => i.name), ...d.recipe.steps].join(" ");
@@ -59,7 +64,9 @@ export function findViolations(plan: DayPlan, ctx: PlanContext): Violation[] {
         const how = `${dish.recipe.kidNote} ${dish.recipe.steps.join(" ")}`;
         if (!CUT_WORDS.test(how)) add("choking", "목에 걸릴 수 있는 재료인데 자르는 방법이 없어요");
       }
-      if (UNSAFE.test(all)) add("unsafe", "꿀, 날것, 덜 익힌 달걀은 쓰지 않아요");
+      const unsafe = affirmative([dish.name, ...dish.recipe.ingredients.map((i) => i.name), ...dish.recipe.steps]).match(UNSAFE);
+      // 걸린 말을 함께 알려 줘야 모델이 그 부분만 고친다.
+      if (unsafe) add("unsafe", `꿀, 날것, 덜 익힌 달걀은 쓰지 않아요 ("${unsafe[0]}")`);
       if (meal === "breakfast" && dish.recipe.minutes > 10) {
         add("breakfast-time", `아침은 10분 이하여야 해요 (${dish.recipe.minutes}분)`);
       }
