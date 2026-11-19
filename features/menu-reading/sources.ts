@@ -3,6 +3,8 @@ import { join } from "node:path";
 
 import { createWorker, PSM } from "tesseract.js";
 
+import { dataDir } from "@/lib/data-dir";
+
 import { htmlToText, imageUrlsIn } from "./html";
 
 /**
@@ -12,7 +14,7 @@ import { htmlToText, imageUrlsIn } from "./html";
  */
 export async function ocrImages(images: Buffer[]): Promise<string> {
   if (!images.length) return "";
-  const cachePath = join(process.cwd(), ".data", "tesseract");
+  const cachePath = join(dataDir(), "tesseract");
   await mkdir(cachePath, { recursive: true });
   const worker = await createWorker(["kor", "eng"], undefined, { cachePath });
   try {

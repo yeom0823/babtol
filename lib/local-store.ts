@@ -1,13 +1,15 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import { dataDir } from "@/lib/data-dir";
+
 /**
  * 이 컴퓨터의 JSON 파일 하나에 키별로 저장한다(가정 A1).
  * 아이 정보와 계정 세션이 들어가므로 파일은 git이 무시하는 .data/ 아래에 둔다.
  */
 function dataFile(): string {
   return (
-    process.env.HOME_MEAL_DATA_FILE ?? join(process.cwd(), ".data", "home-meal.json")
+    process.env.HOME_MEAL_DATA_FILE ?? join(dataDir(), "home-meal.json")
   );
 }
 
