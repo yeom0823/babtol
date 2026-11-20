@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRightIcon, LayoutGridIcon, ListIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import type { HomeDish, HomeMeal, MealKey } from "@/features/meal-plan";
 import { cn } from "@/lib/utils";
 
 import { DishPicture } from "./dish-picture";
-import { FEEDBACK_EMOJI, FeedbackButtons } from "./feedback-buttons";
+import { FeedbackButtons } from "./feedback-buttons";
 import { RecipeSheet } from "./recipe-sheet";
 import { useDishLayout } from "./use-dish-layout";
 
@@ -36,8 +36,8 @@ const SWAP_ALL_LABEL: Record<MealKey, string> = {
 const isSoup = (name: string) => /(국|찌개|탕)$/.test(name);
 
 /**
- * 집 끼니 한 장: 왜 이 메뉴인지와 메뉴 목록. 메뉴는 한 줄 목록이나 2열 타일로 볼 수 있고,
- * 하나를 누르면 시트에서 레시피, 이것만 바꾸기, 먹은 반응을 다룬다.
+ * 집 끼니 한 장: 왜 이 메뉴인지와 메뉴 목록. 메뉴는 한 줄 목록이나 2열 타일로 볼 수 있다.
+ * 먹은 반응은 목록에서 바로 누르고, 메뉴를 누르면 시트에서 레시피와 이것만 바꾸기를 다룬다.
  */
 export function HomeMealCard({
   iso,
@@ -59,8 +59,8 @@ export function HomeMealCard({
   const [busy, setBusy] = useState<string | null>(null);
   const [failed, setFailed] = useState<"busy" | "error" | null>(null);
   const [opened, setOpened] = useState<number | null>(null);
-  // 시트에서 누른 반응을 목록에도 바로 보이게 한다.
-  const [reactions, setReactions] = useState<Record<string, FeedbackValue | null>>({});
+  // 마지막으로 누른 반응의 안내 문장. 버튼 옆이 좁아 메뉴 줄 아래에 띄운다.
+  const [notice, setNotice] = useState<{ index: number; text: string } | null>(null);
   const [layout, setLayout] = useDishLayout();
 
   const run = (key: string, job: () => Promise<{ ok: boolean; busy?: boolean }>) => {
@@ -76,7 +76,6 @@ export function HomeMealCard({
   const basics = data.dishes.filter((d) => d.basic);
   const mains = data.dishes.map((dish, index) => ({ dish, index })).filter(({ dish }) => !dish.basic);
   const swappable = mains.length > 1;
-  const reactionOf = (name: string) => (name in reactions ? reactions[name] : (feedback[name] ?? null));
   // 목록 보기에서만, 실제 사진이 있을 때만 대표 사진을 크게 보여 준다.
   const hero = layout === "list" ? mains.find(({ dish }) => photos[dish.name])?.dish : undefined;
   const openedDish = opened === null ? null : (data.dishes[opened] ?? null);
@@ -95,16 +94,28 @@ export function HomeMealCard({
       .join(" · ");
   };
 
-
-  const status = (dish: HomeDish, index: number) => {
-    if (busy === `dish-${index}`) return <Spinner className="flex-none" />;
-    const reaction = reactionOf(dish.name);
-    return reaction ? (
-      <span aria-label={`반응: ${reaction}`} className="flex-none text-base">
-        {FEEDBACK_EMOJI[reaction]}
+  const reactions = (dish: HomeDish, index: number) =>
+    busy === `dish-${index}` ? (
+      <span className="grid h-8 w-[100px] flex-none place-items-center">
+        <Spinner />
       </span>
-    ) : null;
-  };
+    ) : (
+      <FeedbackButtons
+        iso={iso}
+        meal={meal}
+        name={dish.name}
+        initial={feedback[dish.name] ?? null}
+        save={actions.setFeedback}
+        onMessage={(text) => setNotice(text ? { index, text } : null)}
+      />
+    );
+
+  const noticeFor = (index: number) =>
+    notice?.index === index && (
+      <p role="status" className="m-0 pb-2 text-xs text-muted-foreground">
+        {notice.text}
+      </p>
+    );
 
   return (
     <Card className={cn(pending && "opacity-60 transition-opacity")} aria-busy={pending}>
@@ -166,34 +177,41 @@ export function HomeMealCard({
           <ul className="m-0 flex list-none flex-col p-0">
             {mains.map(({ dish, index }) => (
               <li key={`${dish.name}-${index}`} className="border-t first:border-t-0">
-                <button
-                  type="button"
-                  onClick={() => setOpened(index)}
-                  className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-muted/50"
-                >
-                  <DishPicture src={photos[dish.name]} className="size-12 flex-none rounded-xl text-lg" />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="truncate text-[15px] leading-snug font-bold">{dish.name}</span>
-                    <span className="truncate text-[13px] text-muted-foreground">{meta(dish)}</span>
-                  </span>
-                  {status(dish, index)}
-                  <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-muted-foreground" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpened(index)}
+                    aria-label={`${dish.name} 레시피 보기`}
+                    className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left"
+                  >
+                    <DishPicture src={photos[dish.name]} className="size-12 flex-none rounded-xl text-lg" />
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="truncate text-[15px] leading-snug font-bold">{dish.name}</span>
+                      <span className="truncate text-[13px] text-muted-foreground">{meta(dish)}</span>
+                    </span>
+                  </button>
+                  {reactions(dish, index)}
+                </div>
+                {noticeFor(index)}
               </li>
             ))}
           </ul>
         ) : (
-          <ul className="m-0 grid list-none grid-cols-2 gap-2.5 p-0">
+          <ul className="m-0 grid list-none grid-cols-2 gap-x-2.5 gap-y-3 p-0">
             {mains.map(({ dish, index }) => (
-              <li key={`${dish.name}-${index}`}>
-                <button type="button" onClick={() => setOpened(index)} className="flex w-full flex-col gap-1 text-left">
+              <li key={`${dish.name}-${index}`} className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => setOpened(index)}
+                  aria-label={`${dish.name} 레시피 보기`}
+                  className="flex w-full flex-col gap-1 text-left"
+                >
                   <DishPicture src={photos[dish.name]} className="aspect-[4/3] w-full rounded-xl text-3xl" />
-                  <span className="flex items-center gap-1">
-                    <span className="min-w-0 flex-1 truncate text-sm leading-snug font-bold">{dish.name}</span>
-                    {status(dish, index)}
-                  </span>
+                  <span className="truncate text-sm leading-snug font-bold">{dish.name}</span>
                   <span className="truncate text-xs text-muted-foreground">{meta(dish)}</span>
                 </button>
+                {reactions(dish, index)}
+                {noticeFor(index)}
               </li>
             ))}
           </ul>
@@ -215,31 +233,19 @@ export function HomeMealCard({
         photo={openedDish ? photos[openedDish.name] : null}
         actions={
           openedDish &&
-          opened !== null && (
-            <div className="flex flex-col gap-2">
-              <FeedbackButtons
-                key={openedDish.name}
-                iso={iso}
-                meal={meal}
-                name={openedDish.name}
-                initial={reactionOf(openedDish.name)}
-                save={actions.setFeedback}
-                onChange={(value) => setReactions((r) => ({ ...r, [openedDish.name]: value }))}
-              />
-              {(openedDish.leftover || swappable) && (
-                <Button
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => {
-                    const index = opened;
-                    setOpened(null);
-                    run(`dish-${index}`, () => actions.swapDish(iso, meal, index));
-                  }}
-                >
-                  🔀 {openedDish.leftover ? "다 먹었어요, 새 국 고르기" : "이것만 다른 메뉴로 바꾸기"}
-                </Button>
-              )}
-            </div>
+          opened !== null &&
+          (openedDish.leftover || swappable) && (
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => {
+                const index = opened;
+                setOpened(null);
+                run(`dish-${index}`, () => actions.swapDish(iso, meal, index));
+              }}
+            >
+              🔀 {openedDish.leftover ? "다 먹었어요, 새 국 고르기" : "이것만 다른 메뉴로 바꾸기"}
+            </Button>
           )
         }
       />
