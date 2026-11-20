@@ -4,6 +4,7 @@ export {
   connectWithCode,
   connectWithPassword,
   connectionStatus,
+  disconnect,
   getSession,
   markExpired,
   type ConnectResult,

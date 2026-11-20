@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { connectionStatus, connectWithPassword, markExpired } from "./connection";
+import { connectionStatus, connectWithPassword, disconnect, getSession, markExpired } from "./connection";
 
 let dir: string;
 beforeEach(async () => {
@@ -52,4 +52,11 @@ test("세션이 만료되면 만료 상태가 된다 (AC3)", async () => {
   await connectWithPassword("mom", PASSWORD, fakeKidsnote);
   await markExpired();
   expect(await connectionStatus()).toBe("expired");
+});
+
+test("연결을 끊으면 저장한 세션을 지우고 연결 안 함 상태가 된다", async () => {
+  await connectWithPassword("mom", PASSWORD, fakeKidsnote);
+  await disconnect();
+  expect(await connectionStatus()).toBe("none");
+  expect(await getSession()).toBeNull();
 });

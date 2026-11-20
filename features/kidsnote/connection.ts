@@ -31,6 +31,12 @@ export async function markExpired(): Promise<void> {
   await updateStore<Saved>(SESSION, null, (s) => (s ? { ...s, expired: true } : s));
 }
 
+/** 연결 끊기: 저장한 세션 쿠키를 지운다. 이미 가져온 식단은 그대로 둔다. */
+export async function disconnect(): Promise<void> {
+  await updateStore<Saved>(SESSION, null, () => null);
+  await updateStore<Pending>(PENDING, null, () => null);
+}
+
 async function finish(result: LoginResult, f: typeof fetch): Promise<ConnectResult> {
   if (result.kind === "failed") return { kind: "failed" };
   if (result.kind === "needs-code") return { kind: "needs-code", phone: result.phone };

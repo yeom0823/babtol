@@ -1,1 +1,1 @@
-export { syncDaycareMenus, type SyncResult } from "./sync";
+export { lastSyncedAt, syncDaycareMenus, type SyncResult } from "./sync";

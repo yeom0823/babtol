@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { syncDaycareMenus } from "@/features/daycare-sync";
-import { connectWithCode, connectWithPassword, type ConnectResult } from "@/features/kidsnote";
+import { connectWithCode, connectWithPassword, disconnect, type ConnectResult } from "@/features/kidsnote";
 import { toISODate } from "@/lib/date";
 
 /** 화면이 그릴 연결 단계. 비밀번호는 어디에도 담지 않는다. */
@@ -32,4 +32,10 @@ export async function submitCode(prev: ConnectState, formData: FormData): Promis
   const phone = prev.step === "code" ? prev.phone : "";
   if (!/^\d{6}$/.test(code)) return { step: "code", phone, failed: true };
   return next(await connectWithCode(code), "code", phone);
+}
+
+/** 키즈노트 연결 끊기. 이미 가져온 식단은 남겨 둔다. */
+export async function disconnectAction(): Promise<void> {
+  await disconnect();
+  redirect("/kid");
 }

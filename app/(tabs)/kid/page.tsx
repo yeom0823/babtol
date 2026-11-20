@@ -1,10 +1,9 @@
 import { connection } from "next/server";
 import Link from "next/link";
-import { ChevronRightIcon, UserIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LogoutButton } from "@/features/account";
 import { getProfile } from "@/features/account/server";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { listAvoid } from "@/features/family-settings";
@@ -25,23 +24,36 @@ export default async function KidPage() {
   const profile = await getProfile();
   return (
     <>
-      {/* 로그인 상태: 로그아웃이면 로그인 링크만, 로그인이면 내 계정과 로그아웃만 보인다. */}
-      <header className="flex items-center justify-between gap-2">
-        <h1 className="text-[22px] font-bold tracking-tight">우리 아이</h1>
-        {profile ? (
-          <div className="flex items-center gap-1.5">
-            <Link href="/settings" className={buttonVariants({ variant: "ghost", size: "sm" })}>
-              <UserIcon data-icon="inline-start" />
-              {profile.displayName || "내 계정"}
+      <h1 className="text-[22px] font-bold tracking-tight">우리 아이</h1>
+
+      {/* 로그인 상태: 로그인하면 내 계정 카드(눌러서 이름 수정·로그아웃), 아니면 로그인 안내만 보인다. */}
+      {profile ? (
+        <Card size="sm">
+          <CardContent>
+            <Item render={<Link href="/settings" />} className="p-0">
+              <ItemMedia>
+                <span className="grid size-10 place-items-center rounded-full bg-primary/12 text-base font-bold text-primary">
+                  {(profile.displayName || profile.email).slice(0, 1).toUpperCase()}
+                </span>
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>{profile.displayName || "이름 없음"}</ItemTitle>
+                <ItemDescription>{profile.email}</ItemDescription>
+              </ItemContent>
+              <ChevronRightIcon className="text-muted-foreground" />
+            </Item>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card size="sm">
+          <CardContent className="flex items-center gap-3">
+            <span className="flex-1 text-sm text-muted-foreground">로그인하면 가족과 식단·기록을 함께 볼 수 있어요.</span>
+            <Link href="/auth/login?next=/kid" className={buttonVariants({ size: "sm" })}>
+              Google로 로그인
             </Link>
-            <LogoutButton />
-          </div>
-        ) : (
-          <Link href="/auth/login?next=/kid" className={buttonVariants({ size: "sm" })}>
-            로그인
-          </Link>
-        )}
-      </header>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="flex flex-col gap-2">
         <h2 className="text-[15px] font-bold">아이 정보</h2>

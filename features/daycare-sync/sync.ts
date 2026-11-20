@@ -47,3 +47,9 @@ export async function syncDaycareMenus(
     return "error";
   }
 }
+
+/** 키즈노트에서 마지막으로 가져온 시각(ms). 한 번도 없으면 null. */
+export async function lastSyncedAt(): Promise<number | null> {
+  const last = await readStore<number>(LAST_SYNC, 0);
+  return last || null;
+}
