@@ -8,7 +8,6 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import type { HomeDish } from "@/features/meal-plan";
 
 import { DishPicture } from "./dish-picture";
-import { FoodGroupChip } from "./food-group-chip";
 
 // 제목에 이미 "아이에게 줄 때"가 있어서 모델이 문장 앞에 되풀이한 것은 뺀다(예전 문구 "두 돌 아이에게 줄 때" 포함).
 const stripLead = (note: string) => note.replace(/^\s*(?:두 돌 )?아이에게 줄 때\s*[:：,]?\s*/, "");
@@ -47,11 +46,7 @@ export function RecipeSheet({
               </SheetDescription>
             </SheetHeader>
             {dish.groups.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {dish.groups.map((g) => (
-                  <FoodGroupChip key={g} group={g} />
-                ))}
-              </div>
+              <p className="m-0 text-[13px] text-muted-foreground">채우는 식품군: {dish.groups.join(", ")}</p>
             )}
             {actions}
             {showRecipe && (

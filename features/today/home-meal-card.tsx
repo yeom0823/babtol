@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 
 import { DishPicture } from "./dish-picture";
 import { FEEDBACK_EMOJI, FeedbackButtons } from "./feedback-buttons";
-import { FoodGroupChip } from "./food-group-chip";
 import { RecipeSheet } from "./recipe-sheet";
 import { useDishLayout } from "./use-dish-layout";
 
@@ -96,14 +95,6 @@ export function HomeMealCard({
       .join(" · ");
   };
 
-  const chips = (dish: HomeDish) =>
-    dish.groups.length > 0 && (
-      <span className="flex flex-wrap gap-1">
-        {dish.groups.map((g) => (
-          <FoodGroupChip key={g} group={g} />
-        ))}
-      </span>
-    );
 
   const status = (dish: HomeDish, index: number) => {
     if (busy === `dish-${index}`) return <Spinner className="flex-none" />;
@@ -180,11 +171,10 @@ export function HomeMealCard({
                   onClick={() => setOpened(index)}
                   className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-muted/50"
                 >
-                  <DishPicture src={photos[dish.name]} className="size-14 flex-none rounded-2xl text-xl" />
+                  <DishPicture src={photos[dish.name]} className="size-12 flex-none rounded-xl text-lg" />
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-[15px] leading-snug font-bold">{dish.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">{meta(dish)}</span>
-                    {chips(dish)}
+                    <span className="truncate text-[13px] text-muted-foreground">{meta(dish)}</span>
                   </span>
                   {status(dish, index)}
                   <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-muted-foreground" />
@@ -203,7 +193,6 @@ export function HomeMealCard({
                     {status(dish, index)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{meta(dish)}</span>
-                  {chips(dish)}
                 </button>
               </li>
             ))}
