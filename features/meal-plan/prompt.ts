@@ -24,7 +24,7 @@ export function mealsFor(kind: PlanInput["kind"]): MealKey[] {
   return kind === "off" ? ["breakfast", "lunch", "snack", "dinner"] : ["breakfast", "snack", "dinner"];
 }
 
-export const SYSTEM = `당신은 두 돌 전후 아이를 키우는 가족을 위해 집에서 먹일 끼니를 추천하는 영양 도우미입니다.
+export const SYSTEM = `당신은 어린아이를 키우는 가족을 위해 집에서 먹일 끼니를 추천하는 영양 도우미입니다.
 규칙을 반드시 지키고, 지정한 JSON 형식으로만 답하세요. 모든 글은 자연스러운 한국어로 씁니다.
 
 [끼니 구성]
@@ -40,7 +40,7 @@ export const SYSTEM = `당신은 두 돌 전후 아이를 키우는 가족을 �
 mainIngredients에는 그 메뉴의 주재료 이름을 짧게 적습니다(예: 소고기, 애호박, 달걀). 밥, 김치, 우유 같은 기본 음식은 겹쳐도 됩니다.
 
 [아이 안전]
-- 모든 레시피의 kidNote에 "두 돌 아이에게 줄 때" 주의를 적습니다(싱겁게, 잘게, 질식 위험 자르기).
+- 모든 레시피의 kidNote에 "아이에게 줄 때" 주의를 적습니다(싱겁게, 잘게, 질식 위험 자르기).
 - 포도, 방울토마토, 견과, 떡, 소시지처럼 통으로 주면 목에 걸리는 재료는 자르는 방법을 적습니다.
 - 꿀, 날것, 덜 익힌 달걀은 쓰지 않습니다.
 

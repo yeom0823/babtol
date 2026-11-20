@@ -82,7 +82,7 @@ export function findViolations(plan: DayPlan, ctx: PlanContext): Violation[] {
       }
       if (ctx.resting.includes(dish.name)) add("resting", "잠깐 쉬는 메뉴");
 
-      if (!dish.recipe.kidNote.trim()) add("kid-note", "두 돌 아이에게 줄 때 주의가 없어요");
+      if (!dish.recipe.kidNote.trim()) add("kid-note", "아이에게 줄 때 주의가 없어요");
       const ingredients = dish.recipe.ingredients.map((i) => i.name).join(" ");
       if (CHOKING.test(`${dish.name} ${ingredients}`)) {
         const how = `${dish.recipe.kidNote} ${dish.recipe.steps.join(" ")}`;

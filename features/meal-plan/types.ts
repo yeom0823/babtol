@@ -8,7 +8,7 @@ export type Recipe = {
   servings: number;
   ingredients: { name: string; amount: string }[];
   steps: string[];
-  /** "두 돌 아이에게 줄 때" 주의(싱겁게, 잘게, 질식 위험 자르기). */
+  /** "아이에게 줄 때" 주의(싱겁게, 잘게, 질식 위험 자르기). */
   kidNote: string;
 };
 
