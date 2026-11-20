@@ -28,7 +28,8 @@ export default async function ChildPage(props: PageProps<"/children/[id]">) {
       <section className="rounded-3xl bg-primary/8 p-5">
         <ChildForm
           initial={{
-            name: child?.name ?? "",
+            // 새로 추가할 때는 이름 칸을 기본 이름으로 채워 둔다.
+            name: child?.name ?? "도하",
             birthMonth: child?.birthMonth?.slice(0, 7) ?? "",
             allergies: child?.allergies.join(", ") ?? "",
           }}

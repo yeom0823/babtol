@@ -24,7 +24,7 @@ export function ChildForm({
         <label htmlFor="child-name" className="px-1 text-sm font-semibold">
           이름(별명)
         </label>
-        <Input id="child-name" name="name" required maxLength={20} defaultValue={initial.name} placeholder="지우" className={field} />
+        <Input id="child-name" name="name" required maxLength={20} defaultValue={initial.name} placeholder="도하" className={field} />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="child-birth" className="px-1 text-sm font-semibold">
