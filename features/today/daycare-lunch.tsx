@@ -13,9 +13,19 @@ import {
 import type { StoredMenu } from "@/features/daycare-menu";
 
 import { MealSlide } from "./meal-slide";
+import { RefreshDaycareButton } from "./refresh-daycare-button";
 
 /** 평일 점심 장: 어린이집 식단을 읽기 전용으로 보여 준다. 식단이 없는 날은 올리기로 안내한다. */
-export function DaycareLunch({ iso, menu }: { iso: string; menu: StoredMenu | null }) {
+export function DaycareLunch({
+  iso,
+  menu,
+  refresh,
+}: {
+  iso: string;
+  menu: StoredMenu | null;
+  /** 키즈노트에서 바로 다시 가져오기. 키즈노트에서 가져온 식단에만 버튼을 보인다. */
+  refresh?: () => Promise<{ ok: boolean }>;
+}) {
   if (!menu) {
     return (
       <MealSlide who="daycare" title="점심" sub="어린이집 식단이 아직 없어요.">
@@ -56,6 +66,7 @@ export function DaycareLunch({ iso, menu }: { iso: string; menu: StoredMenu | nu
             <MenuLine term="점심" dishes={menu.lunch} />
             <MenuLine term="오후간식" dishes={menu.afternoonSnack} photo={menu.photos?.afternoonSnack} />
           </dl>
+          {menu.source === "kidsnote" && refresh && <RefreshDaycareButton refresh={refresh} />}
         </CardContent>
       </Card>
     </MealSlide>

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { syncDaycareMenus } from "@/features/daycare-sync";
 import { releaseResting, setFeedback, type FeedbackValue } from "@/features/meal-feedback";
 import { FOOD_GROUPS, type FoodGroup, type MealKey } from "@/features/meal-plan";
 import { PlanBusyError } from "@/features/meal-plan/server";
@@ -85,4 +86,11 @@ export async function releaseRestingAction(name: string): Promise<ActionResult> 
   revalidatePath("/favs");
   revalidatePath("/");
   return { ok: true };
+}
+
+/** 키즈노트에서 식단과 사진을 바로 다시 가져온다(10분 간격을 기다리지 않는다). */
+export async function refreshDaycareAction(): Promise<ActionResult> {
+  const result = await syncDaycareMenus(toISODate(new Date()), fetch, { force: true });
+  if (result === "synced") revalidatePath("/");
+  return { ok: result === "synced" };
 }

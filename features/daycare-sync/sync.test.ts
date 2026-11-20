@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { getMenu, saveMenus } from "@/features/daycare-menu/server";
 import { connectionStatus, connectWithPassword } from "@/features/kidsnote";
@@ -81,4 +81,20 @@ test("가져온 지 얼마 안 되면 다시 가져오지 않는다", async () =
   expect(k.menuCalls()).toBe(1);
   expect(await syncDaycareMenus("2026-11-17", k.f, { force: true })).toBe("synced");
   expect(k.menuCalls()).toBe(2);
+});
+
+test("10분이 지나면 다시 가져와 새로 올라온 사진도 반영한다", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    vi.setSystemTime(new Date("2026-11-17T06:00:00Z"));
+    const k = fakeKidsnote();
+    await connectWithPassword("mom", "pw", k.f);
+    await syncDaycareMenus("2026-11-17", k.f);
+    vi.setSystemTime(new Date("2026-11-17T06:09:00Z"));
+    expect(await syncDaycareMenus("2026-11-17", k.f)).toBe("recent");
+    vi.setSystemTime(new Date("2026-11-17T06:11:00Z"));
+    expect(await syncDaycareMenus("2026-11-17", k.f)).toBe("synced");
+  } finally {
+    vi.useRealTimers();
+  }
 });

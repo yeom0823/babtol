@@ -28,6 +28,7 @@ import { toISODate, weekOf } from "@/lib/date";
 import {
   buildPlanAction,
   fillGroupAction,
+  refreshDaycareAction,
   setFeedbackAction,
   swapDishAction,
   swapMealAction,
@@ -74,7 +75,7 @@ export default async function TodayPage(props: PageProps<"/">) {
         kind === "off" ? (
           homeMeal("lunch", "점심", selected === today ? "오늘은 어린이집에 가지 않아요" : "이날은 어린이집에 가지 않아요")
         ) : (
-          <DaycareLunch iso={selected} menu={menu} />
+          <DaycareLunch iso={selected} menu={menu} refresh={refreshDaycareAction} />
         ),
     },
     {

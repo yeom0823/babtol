@@ -6,7 +6,8 @@ import { readStore, updateStore } from "@/lib/local-store";
 export type SyncResult = "none" | "synced" | "expired" | "recent" | "error";
 
 const LAST_SYNC = "kidsnoteLastSync";
-const RECENT_MS = 60 * 60 * 1000;
+/** 선생님이 낮 동안 간식·점심 사진을 나중에 올리므로 자주 확인한다. 화면을 열 때만 부르니 요청은 많지 않다. */
+const RECENT_MS = 10 * 60 * 1000;
 
 /**
  * 연결된 키즈노트에서 이번 주와 다음 주 식단을 가져와 저장한다.
