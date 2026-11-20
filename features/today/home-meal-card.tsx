@@ -85,7 +85,7 @@ export function HomeMealCard({
           {data.dishes.map((dish, index) => (
             <div
               key={`${dish.name}-${index}`}
-              className="flex flex-col gap-2 border-t py-3 first:border-t-0 first:pt-0"
+              className="border-t py-2.5 first:border-t-0 first:pt-0 last:pb-0"
             >
               {dish.basic ? (
                 <div className="flex items-center gap-2 text-sm">
@@ -93,62 +93,57 @@ export function HomeMealCard({
                   <span>{dish.name}과 함께 차려 주세요</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3">
-                  <DishPicture src={photos[dish.name]} className="size-[60px] flex-none rounded-2xl text-2xl" />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    {dish.leftover && (
-                      <span>
-                        <Badge variant="secondary" className="bg-primary/12 text-primary">
-                          ♻️ 어제 저녁에 끓인 국
-                        </Badge>
-                      </span>
-                    )}
-                    <span className="text-base font-bold">{dish.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {dish.leftover ? "데우기만 하면 돼요" : `${dish.recipe.minutes}분`}
-                      {dish.groups.length ? ` · ${dish.groups.join(", ")}` : ""}
-                    </span>
-                    {!dish.leftover && dish.recipe.servings > 1 && /(국|찌개|탕)$/.test(dish.name) && meal === "dinner" && (
-                      <span className="text-xs text-primary">♻️ 넉넉히 끓이면 내일 저녁엔 데우기만 해요</span>
-                    )}
-                    <div className="flex flex-wrap gap-1.5">
-                      {dish.leftover ? (
+                <div className="flex gap-2.5">
+                  <DishPicture src={photos[dish.name]} className="size-11 flex-none rounded-xl text-lg" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    {/* 이름·정보와 레시피·바꾸기를 한 줄에 둔다 */}
+                    <div className="flex items-start gap-1">
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        {dish.leftover && (
+                          <span className="text-[11px] font-semibold text-primary">♻️ 어제 저녁에 끓인 국</span>
+                        )}
+                        <span className="truncate text-[15px] leading-snug font-bold">{dish.name}</span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {dish.leftover ? "데우기만 하면 돼요" : `${dish.recipe.minutes}분`}
+                          {dish.groups.length ? ` · ${dish.groups.join(", ")}` : ""}
+                          {!dish.leftover && dish.recipe.servings > 1 && /(국|찌개|탕)$/.test(dish.name) && meal === "dinner"
+                            ? " · ♻️ 내일 저녁까지"
+                            : ""}
+                        </span>
+                      </div>
+                      {!dish.leftover && (
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={pending}
-                          onClick={() => run(`dish-${index}`, () => actions.swapDish(iso, meal, index))}
+                          variant="outline"
+                          size="icon-sm"
+                          aria-label={`${dish.name} 레시피`}
+                          title="레시피"
+                          onClick={() => setRecipe(dish)}
                         >
-                          {busy === `dish-${index}` ? <Spinner data-icon="inline-start" /> : "🍲"} 다 먹었어요, 새로 고르기
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => setRecipe(dish)}>
-                          📖 레시피
+                          📖
                         </Button>
                       )}
-                      {swappable && !dish.leftover && (
+                      {(dish.leftover || swappable) && (
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size={dish.leftover ? "sm" : "icon-sm"}
                           disabled={pending}
-                          aria-label={`${dish.name} 대신 다른 메뉴로 바꾸기`}
+                          aria-label={dish.leftover ? "다 먹었어요, 새 국 고르기" : `${dish.name} 대신 다른 메뉴로 바꾸기`}
+                          title={dish.leftover ? "다 먹었어요, 새로 고르기" : "이것만 바꾸기"}
                           onClick={() => run(`dish-${index}`, () => actions.swapDish(iso, meal, index))}
                         >
-                          {busy === `dish-${index}` ? <Spinner data-icon="inline-start" /> : "🔀"} 이것만 바꾸기
+                          {busy === `dish-${index}` ? <Spinner /> : dish.leftover ? "🍲 새로 고르기" : "🔀"}
                         </Button>
                       )}
                     </div>
+                    <FeedbackButtons
+                      iso={iso}
+                      meal={meal}
+                      name={dish.name}
+                      initial={feedback[dish.name] ?? null}
+                      save={actions.setFeedback}
+                    />
                   </div>
                 </div>
-              )}
-              {!dish.basic && (
-                <FeedbackButtons
-                  iso={iso}
-                  meal={meal}
-                  name={dish.name}
-                  initial={feedback[dish.name] ?? null}
-                  save={actions.setFeedback}
-                />
               )}
             </div>
           ))}

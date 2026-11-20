@@ -54,7 +54,8 @@ export function FeedbackButtons({
 
   return (
     <div className="flex flex-col gap-1">
-      <div role="group" aria-label={`${name} 먹은 반응`} className="grid grid-cols-3 gap-1.5">
+      {/* 작은 알약 3개를 한 줄에 둔다. 누르면 그 상태로 표시되고 다시 누르면 취소된다(AC7). */}
+      <div role="group" aria-label={`${name} 먹은 반응`} className="flex flex-wrap gap-1">
         {OPTIONS.map(([emoji, label]) => (
           <button
             key={label}
@@ -62,11 +63,11 @@ export function FeedbackButtons({
             aria-pressed={value === label}
             onClick={() => press(label)}
             className={cn(
-              "inline-flex h-9 items-center justify-center gap-1 rounded-full border bg-background text-[13px]",
-              value === label && "border-foreground bg-foreground font-bold text-background"
+              "inline-flex h-7 items-center gap-0.5 rounded-full border bg-background px-2.5 text-xs text-muted-foreground hover:bg-accent",
+              value === label && "border-foreground bg-foreground font-semibold text-background hover:bg-foreground"
             )}
           >
-            {emoji} {label}
+            <span aria-hidden="true">{emoji}</span> {label}
           </button>
         ))}
       </div>
