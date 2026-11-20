@@ -24,6 +24,10 @@ export function ShoppingView({ list, label }: { list: ShoppingList; label: strin
   const items = list.groups.flatMap((g) => g.items);
   const left = items.filter((i) => !checked.has(i.name)).length;
   const allDone = items.length > 0 && left === 0;
+  // "21일 감자탕"처럼 날짜가 붙어 오는데, 하루치 목록이면 줄마다 같은 날짜라 뺀다.
+  const DAY = /^\d+일\s+/;
+  const singleDay = new Set(items.flatMap((i) => i.uses.map((u) => u.match(DAY)?.[0]))).size <= 1;
+  const useLabel = (use: string) => (singleDay ? use.replace(DAY, "") : use);
 
   const toggle = (name: string) =>
     setChecked((prev) => {
@@ -90,7 +94,7 @@ export function ShoppingView({ list, label }: { list: ShoppingList; label: strin
                           {item.name}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {item.uses.slice(0, 2).join(", ")}
+                          {item.uses.slice(0, 2).map(useLabel).join(", ")}
                           {item.uses.length > 2 ? ` 외 ${item.uses.length - 2}개` : ""}
                         </span>
                       </span>

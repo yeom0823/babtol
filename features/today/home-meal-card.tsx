@@ -35,6 +35,9 @@ const SWAP_ALL_LABEL: Record<MealKey, string> = {
 
 const isSoup = (name: string) => /(국|찌개|탕)$/.test(name);
 
+/** 모델이 "…섭취하게 하기 위해"처럼 끊어 쓴 이유를 "…위해 골랐어요."로 끝맺는다. */
+const finishWhy = (why: string) => why.trim().replace(/(위해|위하여)\.?$/, "$1 골랐어요.");
+
 /**
  * 집 끼니 한 장: 왜 이 메뉴인지와 메뉴 목록. 메뉴는 한 줄 목록이나 2열 타일로 볼 수 있다.
  * 먹은 반응은 목록에서 바로 누르고, 메뉴를 누르면 시트에서 레시피와 이것만 바꾸기를 다룬다.
@@ -127,7 +130,7 @@ export function HomeMealCard({
           <span>💡</span>
           <span>
             {data.dishes.some((d) => d.leftover) && "어제 끓인 국이 남아서 오늘은 반찬만 새로 만들면 돼요. "}
-            {data.why}
+            {finishWhy(data.why)}
           </span>
         </div>
 
@@ -149,7 +152,12 @@ export function HomeMealCard({
             {busy === "all" ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
             {busy === "all" ? "고르는 중" : SWAP_ALL_LABEL[meal]}
           </Button>
-          <div role="group" aria-label="메뉴 보기 방식" className="flex flex-none rounded-full bg-muted p-0.5">
+          {/* 메뉴가 하나뿐이면 목록과 타일이 다를 게 없어 전환을 숨긴다. */}
+          <div
+            role="group"
+            aria-label="메뉴 보기 방식"
+            className={cn("flex flex-none rounded-full bg-muted p-0.5", mains.length < 2 && "hidden")}
+          >
             {(
               [
                 ["list", "목록으로 보기", ListIcon],
