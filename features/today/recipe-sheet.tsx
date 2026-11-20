@@ -3,19 +3,19 @@
 import type { ReactNode } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { HomeDish } from "@/features/meal-plan";
 
 import { DishPicture } from "./dish-picture";
+import { FoodGroupChip } from "./food-group-chip";
 
-// 제목에 이미 "두 돌 아이에게 줄 때"가 있어서 모델이 문장 앞에 되풀이한 것은 뺀다.
-const stripLead = (note: string) => note.replace(/^\s*두 돌 아이에게 줄 때\s*[:：,]?\s*/, "");
+// 제목에 이미 "아이에게 줄 때"가 있어서 모델이 문장 앞에 되풀이한 것은 뺀다(예전 문구 "두 돌 아이에게 줄 때" 포함).
+const stripLead = (note: string) => note.replace(/^\s*(?:두 돌 )?아이에게 줄 때\s*[:：,]?\s*/, "");
 
 /**
  * 메뉴 한 가지의 자세한 화면: 사진, 바꾸기·먹은 반응 같은 할 일(actions),
- * 레시피(재료와 분량, 순서, "두 돌 아이에게 줄 때" 주의)를 보여 준다.
+ * 레시피(재료와 분량, 순서, "아이에게 줄 때" 주의)를 보여 준다.
  */
 export function RecipeSheet({
   dish,
@@ -49,9 +49,7 @@ export function RecipeSheet({
             {dish.groups.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {dish.groups.map((g) => (
-                  <Badge key={g} variant="secondary">
-                    {g}
-                  </Badge>
+                  <FoodGroupChip key={g} group={g} />
                 ))}
               </div>
             )}
@@ -80,7 +78,7 @@ export function RecipeSheet({
                   </ol>
                 </section>
                 <Alert>
-                  <AlertTitle>👶 두 돌 아이에게 줄 때</AlertTitle>
+                  <AlertTitle>👶 아이에게 줄 때</AlertTitle>
                   <AlertDescription>{stripLead(dish.recipe.kidNote)}</AlertDescription>
                 </Alert>
               </>

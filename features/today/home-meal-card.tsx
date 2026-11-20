@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 
 import { DishPicture } from "./dish-picture";
 import { FEEDBACK_EMOJI, FeedbackButtons } from "./feedback-buttons";
+import { FoodGroupChip } from "./food-group-chip";
 import { RecipeSheet } from "./recipe-sheet";
 import { useDishLayout } from "./use-dish-layout";
 
@@ -81,13 +82,28 @@ export function HomeMealCard({
   const hero = layout === "list" ? mains.find(({ dish }) => photos[dish.name])?.dish : undefined;
   const openedDish = opened === null ? null : (data.dishes[opened] ?? null);
 
-  const meta = (dish: HomeDish) =>
-    [
-      dish.leftover ? "어제 끓인 국" : `${dish.recipe.minutes}분`,
+  // 조리 시간과 주재료(없으면 레시피 앞쪽 재료). 무엇으로 만드는지 목록에서 바로 보이게 한다.
+  const meta = (dish: HomeDish) => {
+    const stuff = dish.mainIngredients.length
+      ? dish.mainIngredients
+      : dish.recipe.ingredients.slice(0, 2).map((i) => i.name);
+    return [
+      dish.leftover ? "어제 끓인 국, 데우기만" : `${dish.recipe.minutes}분`,
+      stuff.slice(0, 3).join(", ") || null,
       !dish.leftover && dish.recipe.servings > 1 && isSoup(dish.name) && meal === "dinner" ? "♻️ 내일까지" : null,
     ]
       .filter(Boolean)
       .join(" · ");
+  };
+
+  const chips = (dish: HomeDish) =>
+    dish.groups.length > 0 && (
+      <span className="flex flex-wrap gap-1">
+        {dish.groups.map((g) => (
+          <FoodGroupChip key={g} group={g} />
+        ))}
+      </span>
+    );
 
   const status = (dish: HomeDish, index: number) => {
     if (busy === `dish-${index}`) return <Spinner className="flex-none" />;
@@ -162,12 +178,13 @@ export function HomeMealCard({
                 <button
                   type="button"
                   onClick={() => setOpened(index)}
-                  className="flex w-full items-center gap-2.5 py-2 text-left hover:bg-muted/50"
+                  className="flex w-full items-center gap-3 py-2.5 text-left hover:bg-muted/50"
                 >
-                  <DishPicture src={photos[dish.name]} className="size-10 flex-none rounded-xl text-base" />
-                  <span className="flex min-w-0 flex-1 flex-col">
+                  <DishPicture src={photos[dish.name]} className="size-14 flex-none rounded-2xl text-xl" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <span className="truncate text-[15px] leading-snug font-bold">{dish.name}</span>
                     <span className="truncate text-xs text-muted-foreground">{meta(dish)}</span>
+                    {chips(dish)}
                   </span>
                   {status(dish, index)}
                   <ChevronRightIcon aria-hidden="true" className="size-4 flex-none text-muted-foreground" />
@@ -186,6 +203,7 @@ export function HomeMealCard({
                     {status(dish, index)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{meta(dish)}</span>
+                  {chips(dish)}
                 </button>
               </li>
             ))}
