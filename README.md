@@ -19,16 +19,17 @@
 
 ## 기술 스택
 
-Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · shadcn/ui · Bun · Vitest · Playwright
+Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · shadcn/ui · Bun · Vitest · Playwright · Supabase(Auth, Postgres) · Vercel AI SDK
 
 ## 시작하기
 
 ```bash
 bun install
-bun dev
+bun run dev -p 3100
 ```
 
-[http://localhost:3000](http://localhost:3000)에서 결과를 확인할 수 있습니다.
+[http://localhost:3100](http://localhost:3100)에서 결과를 확인할 수 있습니다.
+환경 변수, 외부 서비스 설정, 지금 구조와 남은 일은 [다른 환경에서 이어서 작업하기](docs/guides/continue-work.md)에 정리되어 있습니다.
 
 ## 스크립트
 
