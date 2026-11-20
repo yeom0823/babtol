@@ -71,7 +71,7 @@ const cloudModel: JsonModel = async ({ system, user, timeoutMs = 20_000, images 
 };
 
 /**
- * 집 PC의 Ollama 모델(OpenAI 호환 API). 공식 @ai-sdk/openai-compatible로 붙인다.
+ * 자체 호스팅 Ollama 모델(OpenAI 호환 API). 공식 @ai-sdk/openai-compatible로 붙인다.
  * 로컬 모델은 클라우드보다 느려서, 부른 쪽이 정한 시간과 OLLAMA_TIMEOUT_MS 가운데 긴 쪽을 기다린다.
  * 생각(추론) 단계가 없는 모델(예: exaone3.5, qwen2.5)을 권한다.
  */
@@ -97,7 +97,7 @@ function ollamaModel(config: OllamaConfig, modelId: string): JsonModel {
 const ollama = ollamaConfig(process.env);
 
 /**
- * 앱 전체가 쓰는 기본 모델. 집 PC Ollama가 설정되어 있으면 그것을 먼저 쓰고, 꺼져 있거나 실패하면
+ * 앱 전체가 쓰는 기본 모델. 자체 호스팅 Ollama가 설정되어 있으면 그것을 먼저 쓰고, 꺼져 있거나 실패하면
  * 같은 요청을 AI Gateway 모델로 넘긴다. 설정이 없으면 AI Gateway만 쓴다.
  */
 export const gatewayModel: JsonModel = ollama
@@ -105,7 +105,7 @@ export const gatewayModel: JsonModel = ollama
   : cloudModel;
 
 /**
- * 사진을 직접 읽는 비전 모델(집 PC Ollama의 OLLAMA_VISION_MODEL). 설정이 없으면 null이라
+ * 사진을 직접 읽는 비전 모델(자체 호스팅 Ollama의 OLLAMA_VISION_MODEL). 설정이 없으면 null이라
  * 식단표 사진은 OCR로 글자를 먼저 뽑는다.
  */
 export const visionModel: JsonModel | null =

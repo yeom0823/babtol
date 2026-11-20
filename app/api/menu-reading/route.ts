@@ -12,7 +12,7 @@ import { visionModel } from "@/lib/llm";
  * 식단표 사진(여러 장)이나 링크를 받아 날짜별 메뉴를 읽는다. 저장하지 않고 읽은 결과만 돌려준다.
  * 사진은 서버 액션의 본문 크기 제한을 넘기 쉬워서 Route Handler로 받는다.
  *
- * 집 PC에 비전 모델(OLLAMA_VISION_MODEL)이 있으면 사진을 직접 읽게 하고, 실패하거나 아무것도
+ * 자체 호스팅 Ollama에 비전 모델(OLLAMA_VISION_MODEL)이 있으면 사진을 직접 읽게 하고, 실패하거나 아무것도
  * 못 읽으면 OCR로 글자를 뽑아 텍스트 모델로 정리하는 기존 방식으로 넘어간다.
  */
 export async function POST(request: Request) {

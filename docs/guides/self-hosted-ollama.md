@@ -1,15 +1,15 @@
-# 집 맥미니의 Ollama를 밥톨에 연결하기
+# 자체 호스팅 Ollama를 밥톨에 연결하기
 
-밥톨(Vercel 배포)이 집 맥미니에서 돌리는 Ollama 모델을 먼저 쓰고, 맥미니가 꺼져 있거나 응답하지 않으면 AI Gateway의 무료 모델로 자동으로 넘어가게 하는 설정입니다. 실패한 뒤 3분 동안은 맥미니를 건너뜁니다.
+밥톨(Vercel 배포)이 자체 호스팅 서버에서 돌리는 Ollama 모델을 먼저 쓰고, 서버가 꺼져 있거나 응답하지 않으면 AI Gateway의 무료 모델로 자동으로 넘어가게 하는 설정입니다. 실패한 뒤 3분 동안은 자체 호스팅 서버를 건너뜁니다. 아래 예시는 Apple Silicon Mac(메모리 16GB)을 기준으로 합니다.
 
 ```
-휴대폰 → Vercel(밥톨) → Cloudflare Tunnel(+ Access 토큰) → 맥미니 Ollama
-                     ↘ 맥미니가 안 되면 → AI Gateway 무료 모델
+휴대폰 → Vercel(밥톨) → Cloudflare Tunnel(+ Access 토큰) → 자체 호스팅 Ollama
+                     ↘ 서버가 안 되면 → AI Gateway 무료 모델
 ```
 
-> 모델 이름, 메뉴 위치, 명령어는 바뀔 수 있습니다. 설치할 때 각 공식 사이트(ollama.com, Cloudflare 문서)에서 다시 확인하세요. 맥미니 M4 16GB에서의 실제 속도는 아직 재 보지 않았습니다.
+> 모델 이름, 메뉴 위치, 명령어는 바뀔 수 있습니다. 설치할 때 각 공식 사이트(ollama.com, Cloudflare 문서)에서 다시 확인하세요. 메모리 16GB 기기에서의 실제 속도는 아직 재 보지 않았습니다.
 
-## 1. Ollama와 모델 (맥미니)
+## 1. Ollama와 모델 (서버)
 
 1. ollama.com에서 macOS용 Ollama를 설치합니다.
 2. 모델을 받습니다. 메모리 16GB에서는 7~8B급이 맞습니다.
@@ -23,7 +23,7 @@
    launchctl setenv OLLAMA_KEEP_ALIVE 24h
    ```
    설정 뒤 Ollama 앱을 다시 시작합니다.
-4. 맥미니가 잠들지 않게 **시스템 설정 → 에너지**에서 자동 잠자기를 끕니다.
+4. 서버가 잠들지 않게 **시스템 설정 → 에너지**에서 자동 잠자기를 끕니다.
 5. 확인: `curl http://localhost:11434/v1/models` 에 받은 모델이 보여야 합니다.
 
 Ollama는 `localhost`에서만 듣게 그대로 둡니다. 바깥 연결은 다음 단계의 터널이 맡습니다.
@@ -33,7 +33,7 @@ Ollama는 `localhost`에서만 듣게 그대로 둡니다. 바깥 연결은 다�
 Cloudflare에 연결된 도메인이 하나 필요합니다.
 
 1. Cloudflare 대시보드 → **Zero Trust → Networks → Tunnels**에서 터널을 만듭니다.
-2. 안내대로 맥미니에 `cloudflared`를 설치하고 토큰으로 서비스를 등록합니다(재부팅해도 자동 실행).
+2. 안내대로 서버에 `cloudflared`를 설치하고 토큰으로 서비스를 등록합니다(재부팅해도 자동 실행).
 3. **Public Hostname**을 추가합니다.
    - Hostname: 예) `ollama.내도메인`
    - Service: `http://localhost:11434`
@@ -41,7 +41,7 @@ Cloudflare에 연결된 도메인이 하나 필요합니다.
 
 ## 3. 앱만 들어오게 막기 (꼭 하세요)
 
-Ollama에는 로그인이 없습니다. 이 단계를 건너뛰면 주소를 아는 누구나 맥미니를 씁니다.
+Ollama에는 로그인이 없습니다. 이 단계를 건너뛰면 주소를 아는 누구나 서버를 씁니다.
 
 1. **Zero Trust → Access → Service Auth**에서 **서비스 토큰**을 만듭니다. Client ID와 Client Secret이 한 번 나옵니다.
 2. **Access → Applications**에서 Self-hosted 앱을 만들고 도메인을 `ollama.내도메인`으로 둡니다.
@@ -68,6 +68,6 @@ Ollama에는 로그인이 없습니다. 이 단계를 건너뛰면 주소를 아
 
 ## 동작 방식
 
-- 모든 추천·레시피·식단표 정리는 맥미니 모델을 먼저 부르고, 실패하면 같은 요청을 AI Gateway 모델로 보냅니다(`lib/llm.ts`, `lib/model-router.ts`).
-- 비전 모델이 있으면 식단표 사진은 맥미니가 직접 보고, 실패하거나 아무것도 못 읽으면 OCR로 넘어갑니다(`app/api/menu-reading/route.ts`).
+- 모든 추천·레시피·식단표 정리는 자체 호스팅 모델을 먼저 부르고, 실패하면 같은 요청을 AI Gateway 모델로 보냅니다(`lib/llm.ts`, `lib/model-router.ts`).
+- 비전 모델이 있으면 식단표 사진은 비전 모델이 직접 보고, 실패하거나 아무것도 못 읽으면 OCR로 넘어갑니다(`app/api/menu-reading/route.ts`).
 - 로컬 모델은 첫 응답이 느릴 수 있어 부른 쪽의 제한 시간과 `OLLAMA_TIMEOUT_MS` 가운데 긴 쪽을 기다립니다. Vercel 함수의 최대 실행 시간보다 길게 잡지 마세요.

@@ -57,7 +57,7 @@ export async function readStore<T>(key: string, fallback: T): Promise<T> {
 }
 
 // 같은 서버 안의 변경은 한 줄로 세워 서로 덮어쓰지 않게 한다.
-// 서버가 여러 대일 때 같은 키를 동시에 바꾸면 나중 것이 남는다(가족 규모에서는 드물다).
+// 서버가 여러 대일 때 같은 키를 동시에 바꾸면 나중 것이 남는다(사용자가 적어 드물다).
 let queue: Promise<unknown> = Promise.resolve();
 
 export function updateStore<T>(key: string, fallback: T, update: (current: T) => T): Promise<T> {

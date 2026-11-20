@@ -72,7 +72,7 @@ function toDays(raw: unknown): ReadDay[] {
 }
 
 /**
- * 비전 모델(집 PC의 OLLAMA_VISION_MODEL)이 식단표 사진을 직접 본다. 글자만 뽑는 OCR과 달리
+ * 비전 모델(자체 호스팅 Ollama의 OLLAMA_VISION_MODEL)이 식단표 사진을 직접 본다. 글자만 뽑는 OCR과 달리
  * 표의 칸 위치를 알아서 월간표도 날짜별로 나눌 수 있다. 실패하면 오류를 그대로 내서
  * 부른 쪽이 OCR로 넘어가게 한다.
  */

@@ -77,7 +77,7 @@ test("비전 모델이 있으면 사진을 그대로 넘겨 날짜별 메뉴를 
 
 test("비전 모델이 실패하면 빈 결과가 아니라 오류를 내서 OCR로 넘어갈 수 있게 한다", async () => {
   const broken: JsonModel = async () => {
-    throw new Error("집 PC 꺼짐");
+    throw new Error("자체 호스팅 서버 꺼짐");
   };
   await expect(readMenusFromImages([new Uint8Array([1])], "2026-11-19", broken)).rejects.toThrow();
 });
