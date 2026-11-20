@@ -7,11 +7,11 @@ import { addAvoid, removeAvoid } from "@/features/family-settings";
 export async function addAvoidAction(formData: FormData) {
   await addAvoid(String(formData.get("food") ?? ""));
   revalidatePath("/avoid");
-  revalidatePath("/settings");
+  revalidatePath("/kid");
 }
 
 export async function removeAvoidAction(formData: FormData) {
   await removeAvoid(String(formData.get("food") ?? ""));
   revalidatePath("/avoid");
-  revalidatePath("/settings");
+  revalidatePath("/kid");
 }

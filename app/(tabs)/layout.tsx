@@ -4,6 +4,7 @@ const TABS: TabItem[] = [
   { href: "/", label: "오늘", icon: "🍚" },
   { href: "/shop", label: "장보기", icon: "🛒" },
   { href: "/favs", label: "잘 먹은 메뉴", icon: "😋" },
+  { href: "/kid", label: "우리 아이", icon: "👶" },
 ];
 
 export default function TabsLayout({ children }: LayoutProps<"/">) {

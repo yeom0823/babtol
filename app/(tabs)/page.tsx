@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SettingsIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { connectionStatus } from "@/features/kidsnote";
 import { dayCoverage, type MealKey } from "@/features/meal-plan";
 import {
   DayFoodGroups,
+  DayGreeting,
   DaycareLunch,
   HomeMealCard,
   MealCarousel,
@@ -93,16 +93,8 @@ export default async function TodayPage(props: PageProps<"/">) {
 
   return (
     <>
-      <header className="flex items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <span className="text-xs font-semibold text-muted-foreground">
-            {selected === today ? "오늘" : relative}
-          </span>
-          <h1 className="text-[26px] leading-tight font-bold tracking-tight">{label}</h1>
-        </div>
-        <Link href="/settings" aria-label="설정" className={buttonVariants({ variant: "outline", size: "icon" })}>
-          <SettingsIcon />
-        </Link>
+      <header>
+        <DayGreeting isToday={selected === today} relative={relative} label={label} kind={kind} />
       </header>
 
       <WeekDatePicker selected={selected} today={today} withMenu={new Set(Object.keys(menus))} />

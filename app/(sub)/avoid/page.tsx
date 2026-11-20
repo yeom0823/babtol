@@ -23,7 +23,7 @@ export default async function AvoidPage() {
   const foods = await listAvoid();
   return (
     <>
-      <BackLink href="/settings">설정</BackLink>
+      <BackLink href="/kid">우리 아이</BackLink>
       <div className="flex flex-col gap-2">
         <h1 className="text-[22px] font-bold tracking-tight">피할 음식</h1>
         <p className="m-0 text-[13px] text-muted-foreground">
