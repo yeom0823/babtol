@@ -9,3 +9,5 @@
 **What was tried**: `features/kidsnote/client.ts`에 가정을 주석으로 적고, 형식이 다르면 연결 실패 화면과 식단표 올리기가 대체 경로가 되게 했다.
 
 **Proposed next step**: 사용자가 브라우저에서 `/settings/kidsnote`로 직접 한 번 연결해 본다. 실패하면 키즈노트 웹의 로그인 요청을 개발자 도구로 보고 `client.ts`의 요청 본문과 응답 필드를 맞춘다. 약관의 자동 수집 허용 여부도 아직 확인하지 않았다.
+
+**갱신 (2026-11-20)**: 키즈노트 웹 로그인 화면의 공개 스크립트를 읽어 로그인 주소와 본문을 확인했다. 로그인은 `kapi.kidsnote.com`의 `POST /web/login/`에 JSON `{username, password}`다(`www` 호스트에는 없다). 2단계 인증은 `POST /v1/second-factor-login/send-code/`에 `{username, password, second_factor_id}`, `POST /web/login-2fa/`에 `{username, password, second_factor_id, code, remember_me}`를 보내며, 현재 코드의 2단계 인증 부분은 이와 아직 다르다(이 가족 계정은 2단계 인증이 꺼져 있어 쓰지 않는다). 로그인 응답과 쿠키는 실제 계정으로 확인하지 못했다. 응답 코드로 `already_login`, `blocked`, 상태 409·403이 쓰이는 것을 읽었다.

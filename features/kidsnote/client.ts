@@ -1,12 +1,12 @@
 /**
  * 키즈노트 비공식 웹 내부 API 클라이언트(스펙 "지켜야 할 제약" 참고).
  *
- * 미확인 가정: 요청 본문 형식(로그인은 username·password 폼 전송, 2단계 인증은 JSON)과
- * 2단계 인증 응답의 필드 이름(enabled, phone)은 스펙에 적힌 엔드포인트만 근거로 한 추정이다.
- * 실제 계정으로 연결해 보기 전까지 검증되지 않았다.
+ * 확인한 것: 키즈노트 웹 로그인 화면의 공개 스크립트(2026-11-20)에서, 로그인이 kapi 호스트의
+ * POST /web/login/ 에 JSON {username, password}를 보내는 것을 읽었다(www 호스트에는 이 주소가 없다).
+ * 미확인: 2단계 인증 계정의 응답 필드(enabled, phone)와 2단계 요청 본문은 추정이다.
+ * 실제 로그인 응답은 계정으로 연결해 보기 전까지 확인하지 못했다.
  */
 
-const WEB = "https://www.kidsnote.com";
 const API = "https://kapi.kidsnote.com";
 
 export class KidsnoteAuthError extends Error {}
@@ -46,10 +46,10 @@ export async function login(
       return { kind: "needs-code", phone: info.phone ?? "" };
     }
   }
-  const res = await f(`${WEB}/web/login/`, {
+  const res = await f(`${API}/web/login/`, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ username, password }),
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username, password }),
     redirect: "manual",
   });
   const cookie = cookieFrom(res);

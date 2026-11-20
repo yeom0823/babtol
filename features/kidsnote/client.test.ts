@@ -83,3 +83,22 @@ test("계정 정보 응답 어디에 있든 센터 ID를 찾는다", () => {
   expect(findCenterId({ center_id: 55 })).toBe("55");
   expect(findCenterId({ nothing: true })).toBeNull();
 });
+
+test("로그인은 kapi 주소로 JSON {username, password}를 보낸다", async () => {
+  let seen: { url: string; contentType: string | null; body: unknown } | null = null;
+  const f = (async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (String(url).includes("/v1/second-factors/")) return new Response("{}", { status: 404 });
+    seen = {
+      url: String(url),
+      contentType: new Headers(init?.headers).get("content-type"),
+      body: JSON.parse(String(init?.body)),
+    };
+    return new Response("{}", { status: 200, headers: [["set-cookie", "sessionid=abc; Path=/"]] });
+  }) as typeof fetch;
+  await login({ username: "u", password: "p" }, f);
+  expect(seen).toEqual({
+    url: "https://kapi.kidsnote.com/web/login/",
+    contentType: "application/json",
+    body: { username: "u", password: "p" },
+  });
+});
