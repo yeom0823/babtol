@@ -49,13 +49,25 @@ export function DayFoodGroups({
 
   if (!missing.length) {
     return (
-      <details className="group px-1 text-xs text-muted-foreground">
-        <summary className="flex cursor-pointer list-none items-center gap-1.5 [&::-webkit-details-marker]:hidden">
-          <CheckIcon aria-hidden="true" className="size-3.5" />
-          이날 다섯 가지 식품군을 모두 채웠어요
-          <ChevronDownIcon aria-hidden="true" className="size-3.5 transition-transform group-open:rotate-180" />
+      <details
+        role="status"
+        className="group rounded-2xl border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-xs text-emerald-900/80"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-2.5 [&::-webkit-details-marker]:hidden">
+          <span className="grid size-7 flex-none place-items-center rounded-full bg-emerald-600 text-white">
+            <CheckIcon aria-hidden="true" className="size-4" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-[13px] font-bold text-emerald-900">
+              하루 다섯 가지 식품군을 모두 채웠어요
+            </span>
+            <span>곡류 · 단백질 · 채소 · 과일 · 유제품</span>
+          </span>
+          <ChevronDownIcon aria-label="어디서 채웠는지 보기" className="size-4 flex-none transition-transform group-open:rotate-180" />
         </summary>
-        <Sources sources={sources} withoutDaycare={withoutDaycare} />
+        <div className="mt-1 border-t border-emerald-200 pt-1 [&_dt]:text-emerald-900">
+          <Sources sources={sources} withoutDaycare={withoutDaycare} />
+        </div>
       </details>
     );
   }
