@@ -1,4 +1,4 @@
-import { canonicalIngredient } from "./food-groups";
+import { canonicalIngredient, foodGroupsOfText } from "./food-groups";
 import type { DayPlan, HomeDish, MealKey } from "./types";
 
 export type ViolationRule =
@@ -9,7 +9,8 @@ export type ViolationRule =
   | "choking"
   | "unsafe"
   | "breakfast-time"
-  | "dinner-shape";
+  | "dinner-shape"
+  | "duplicate";
 export type Violation = { meal: MealKey; dish: string; rule: ViolationRule; detail: string };
 
 export type PlanContext = {
@@ -30,6 +31,25 @@ const NEGATED = /않|말고|말아|없이|대신|금지|빼고|피해/;
 const affirmative = (texts: string[]) =>
   texts.flatMap((t) => t.split(/(?<=[.!?。])\s+|,\s*/)).filter((s) => !NEGATED.test(s)).join(" ");
 
+const words = (name: string) => name.trim().split(/\s+/).filter(Boolean);
+
+/**
+ * 같은 메뉴인지: 띄어쓰기만 다르거나, 한쪽 이름의 낱말이 모두 다른 쪽에 들어 있으면("배"와 "배 변") 같다고 본다.
+ * 낱말 단위로 비교해서 "배"와 "배추김치"처럼 글자만 겹치는 메뉴는 다르게 본다.
+ */
+export function sameDish(a: string, b: string): boolean {
+  if (a.replace(/\s+/g, "") === b.replace(/\s+/g, "")) return true;
+  const [short, long] = words(a).length <= words(b).length ? [words(a), words(b)] : [words(b), words(a)];
+  return short.length > 0 && short.every((w) => long.includes(w));
+}
+
+// 저녁 반찬으로 세지 않는 후식. 과일은 식품군으로 따로 판단한다.
+const DESSERT = /푸딩|요거트|요구르트|케이크|쿠키|젤리|아이스크림|주스|스무디|과자|빵/;
+const onlyFruit = (groups: string[]) => groups.length > 0 && groups.every((g) => g === "과일");
+/** 밥, 과일, 후식을 뺀 저녁 반찬(국 포함)인지. */
+const isSideDish = (d: HomeDish) =>
+  !d.basic && !DESSERT.test(d.name) && !onlyFruit(d.groups) && !onlyFruit(foodGroupsOfText(d.name));
+
 const textOf = (d: HomeDish) =>
   [d.name, ...d.recipe.ingredients.map((i) => i.name), ...d.recipe.steps].join(" ");
 
@@ -39,15 +59,19 @@ export function findViolations(plan: DayPlan, ctx: PlanContext): Violation[] {
   const daycare = new Set(ctx.daycareIngredients.map(canonicalIngredient));
 
   // 저녁은 밥·국·반찬 2가지 한 상이다(가정 A2). 밥을 기본으로 표시하지 않았어도 세 가지 이상이면 받는다.
-  if (plan.dinner && plan.dinner.dishes.filter((d) => !d.basic).length < 3) {
-    out.push({ meal: "dinner", dish: "저녁 한 상", rule: "dinner-shape", detail: "밥, 국, 반찬 2가지를 모두 넣어 주세요" });
+  // 과일이나 후식으로 개수를 채우지 않게 반찬으로 세지 않는다.
+  if (plan.dinner && plan.dinner.dishes.filter(isSideDish).length < 3) {
+    out.push({ meal: "dinner", dish: "저녁 한 상", rule: "dinner-shape", detail: "밥, 국, 반찬 2가지를 모두 넣어 주세요. 과일과 후식은 반찬으로 세지 않아요" });
   }
 
   for (const [meal, home] of Object.entries(plan) as [MealKey, NonNullable<DayPlan[MealKey]>][]) {
-    for (const dish of home.dishes) {
-      if (dish.basic) continue;
+    home.dishes.forEach((dish, index) => {
+      if (dish.basic) return;
       const add = (rule: ViolationRule, detail: string) =>
         out.push({ meal, dish: dish.name, rule, detail });
+
+      const twin = home.dishes.slice(0, index).find((d) => !d.basic && sameDish(d.name, dish.name));
+      if (twin) add("duplicate", `${twin.name}와(과) 같은 메뉴예요. 다른 메뉴로 골라 주세요`);
 
       for (const ing of dish.mainIngredients.map(canonicalIngredient)) {
         if (daycare.has(ing)) add("overlap", `어린이집 식단에 이미 ${ing}이(가) 있어요`);
@@ -70,7 +94,7 @@ export function findViolations(plan: DayPlan, ctx: PlanContext): Violation[] {
       if (meal === "breakfast" && dish.recipe.minutes > 10) {
         add("breakfast-time", `아침은 10분 이하여야 해요 (${dish.recipe.minutes}분)`);
       }
-    }
+    });
   }
   return out;
 }

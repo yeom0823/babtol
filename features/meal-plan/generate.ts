@@ -7,7 +7,7 @@ import { dayCoverage } from "./day-coverage";
 import { MEAL_KO, SYSTEM, buildPrompt, mealsFor, type PlanInput } from "./prompt";
 import { dishSchema, mealSchema } from "./schema";
 import type { DayPlan, HomeDish, MealKey } from "./types";
-import { findViolations } from "./violations";
+import { findViolations, sameDish } from "./violations";
 
 export { gatewayModel };
 
@@ -174,7 +174,7 @@ export async function generateDish(
       continue;
     }
     const dish = parsed.data.dish as HomeDish;
-    if (oldNames.includes(dish.name)) {
+    if (oldNames.some((name) => sameDish(name, dish.name))) {
       feedback = [`${dish.name}은(는) 이미 이 끼니에 있어요. 다른 메뉴로 골라 주세요.`];
       continue;
     }

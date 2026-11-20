@@ -119,3 +119,35 @@ test("저녁은 밥·국·반찬 2가지 한 상이어야 한다 (가정 A2)", (
   };
   expect(findViolations(full, ctx).map((x) => x.rule)).not.toContain("dinner-shape");
 });
+
+const rules = (v: { rule: string; dish: string }[], rule: string) => v.filter((x) => x.rule === rule).map((x) => x.dish);
+const dinner = (dishes: HomeDish[]): DayPlan => ({ dinner: { why: "", dishes } });
+
+test("이름이 거의 같은 메뉴가 한 끼니에 둘이면 뒤의 것이 중복이다", () => {
+  const v = findViolations(plan([dish({ name: "배", groups: ["과일"] }), dish({ name: "배 변", groups: ["과일"] })]), ctx);
+  expect(rules(v, "duplicate")).toEqual(["배 변"]);
+});
+
+test("띄어쓰기만 다른 메뉴도 중복이다", () => {
+  const v = findViolations(plan([dish({ name: "소고기무국" }), dish({ name: "소고기 무국" })]), ctx);
+  expect(rules(v, "duplicate")).toEqual(["소고기 무국"]);
+});
+
+test("짧은 이름이 다른 메뉴 이름 속에 글자로만 들어 있으면 중복이 아니다", () => {
+  const v = findViolations(plan([dish({ name: "배", groups: ["과일"] }), dish({ name: "배추김치" })]), ctx);
+  expect(rules(v, "duplicate")).toEqual([]);
+});
+
+test("저녁 반찬 개수에 과일과 디저트는 세지 않는다", () => {
+  const rice = dish({ name: "밥", basic: true });
+  const short = findViolations(
+    dinner([rice, dish({ name: "소고기무국" }), dish({ name: "시금치나물" }), dish({ name: "배", groups: [] }), dish({ name: "요거트 푸딩", groups: ["우유·유제품"] })]),
+    { ...ctx, resting: [] }
+  );
+  expect(rules(short, "dinner-shape")).toEqual(["저녁 한 상"]);
+  const ok = findViolations(
+    dinner([rice, dish({ name: "소고기무국" }), dish({ name: "시금치나물" }), dish({ name: "애호박전" }), dish({ name: "사과", groups: ["과일"] })]),
+    { ...ctx, resting: [] }
+  );
+  expect(rules(ok, "dinner-shape")).toEqual([]);
+});
