@@ -57,7 +57,13 @@ export function DaycareLunch({
       <Card className="bg-muted ring-0">
         <CardContent className="flex flex-col gap-3">
           {menu.photos?.lunch ? (
-            <DaycarePhoto src={menu.photos.lunch} alt="어린이집 점심 사진" className="h-[170px] w-full rounded-[18px]" />
+            // 키즈노트 사진은 오전간식, 점심, 오후간식 3장이다. 점심은 크게, 간식은 그 줄 옆에 작게 보인다.
+            <div className="relative">
+              <DaycarePhoto src={menu.photos.lunch} alt="어린이집 점심 사진" className="h-[170px] w-full rounded-[18px]" />
+              <span className="pointer-events-none absolute top-2.5 left-2.5 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white">
+                점심
+              </span>
+            </div>
           ) : (
             menu.source === "kidsnote" && <p className="m-0 text-xs text-muted-foreground">사진은 아직 안 올라왔어요</p>
           )}

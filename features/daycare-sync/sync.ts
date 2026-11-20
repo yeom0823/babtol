@@ -6,8 +6,12 @@ import { readStore, updateStore } from "@/lib/local-store";
 export type SyncResult = "none" | "synced" | "expired" | "recent" | "error";
 
 const LAST_SYNC = "kidsnoteLastSync";
-/** 선생님이 낮 동안 간식·점심 사진을 나중에 올리므로 자주 확인한다. 화면을 열 때만 부르니 요청은 많지 않다. */
-const RECENT_MS = 10 * 60 * 1000;
+/**
+ * 키즈노트는 공개 API가 아니어서 요청이 잦으면 계정이 막힐 수 있다. 화면을 열 때는 1시간에 한 번만,
+ * "새로 가져오기" 버튼도 마지막으로 가져온 지 5분이 지나야 부른다. 버튼을 여러 번 눌러도 이 간격을 지킨다.
+ */
+const RECENT_MS = 60 * 60 * 1000;
+const FORCE_GAP_MS = 5 * 60 * 1000;
 
 /**
  * 연결된 키즈노트에서 이번 주와 다음 주 식단을 가져와 저장한다.
@@ -21,10 +25,8 @@ export async function syncDaycareMenus(
   const session = await getSession();
   if (!session) return "none";
 
-  if (!force) {
-    const last = await readStore<number>(LAST_SYNC, 0);
-    if (Date.now() - last < RECENT_MS) return "recent";
-  }
+  const last = await readStore<number>(LAST_SYNC, 0);
+  if (Date.now() - last < (force ? FORCE_GAP_MS : RECENT_MS)) return "recent";
 
   const start = weekOf(today)[0];
   const end = addDays(start, 13);

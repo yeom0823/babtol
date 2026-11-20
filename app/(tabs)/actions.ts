@@ -88,9 +88,9 @@ export async function releaseRestingAction(name: string): Promise<ActionResult> 
   return { ok: true };
 }
 
-/** 키즈노트에서 식단과 사진을 바로 다시 가져온다(10분 간격을 기다리지 않는다). */
-export async function refreshDaycareAction(): Promise<ActionResult> {
+/** 키즈노트에서 식단과 사진을 바로 다시 가져온다. 마지막으로 가져온 지 5분이 안 됐으면 recent로 알린다. */
+export async function refreshDaycareAction(): Promise<{ ok: boolean; recent?: boolean }> {
   const result = await syncDaycareMenus(toISODate(new Date()), fetch, { force: true });
   if (result === "synced") revalidatePath("/");
-  return { ok: result === "synced" };
+  return { ok: result === "synced", recent: result === "recent" };
 }

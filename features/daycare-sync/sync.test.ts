@@ -73,27 +73,38 @@ test("세션이 만료되어 401이 오면 연결 만료로 표시한다 (AC3)",
   expect(await connectionStatus()).toBe("expired");
 });
 
-test("가져온 지 얼마 안 되면 다시 가져오지 않는다", async () => {
-  const k = fakeKidsnote();
-  await connectWithPassword("mom", "pw", k.f);
-  await syncDaycareMenus("2026-11-17", k.f);
-  expect(await syncDaycareMenus("2026-11-17", k.f)).toBe("recent");
-  expect(k.menuCalls()).toBe(1);
-  expect(await syncDaycareMenus("2026-11-17", k.f, { force: true })).toBe("synced");
-  expect(k.menuCalls()).toBe(2);
-});
+const at = (time: string) => vi.setSystemTime(new Date(`2026-11-17T${time}:00Z`));
 
-test("10분이 지나면 다시 가져와 새로 올라온 사진도 반영한다", async () => {
+test("화면을 열 때는 1시간에 한 번만 가져온다", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   try {
-    vi.setSystemTime(new Date("2026-11-17T06:00:00Z"));
+    at("01:00");
     const k = fakeKidsnote();
     await connectWithPassword("mom", "pw", k.f);
     await syncDaycareMenus("2026-11-17", k.f);
-    vi.setSystemTime(new Date("2026-11-17T06:09:00Z"));
+    at("01:59");
     expect(await syncDaycareMenus("2026-11-17", k.f)).toBe("recent");
-    vi.setSystemTime(new Date("2026-11-17T06:11:00Z"));
+    at("02:01");
     expect(await syncDaycareMenus("2026-11-17", k.f)).toBe("synced");
+    expect(k.menuCalls()).toBe(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+test("새로 가져오기 버튼도 마지막으로 가져온 지 5분이 안 됐으면 키즈노트를 부르지 않는다", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    at("01:00");
+    const k = fakeKidsnote();
+    await connectWithPassword("mom", "pw", k.f);
+    await syncDaycareMenus("2026-11-17", k.f);
+    at("01:04");
+    expect(await syncDaycareMenus("2026-11-17", k.f, { force: true })).toBe("recent");
+    expect(k.menuCalls()).toBe(1);
+    at("01:06");
+    expect(await syncDaycareMenus("2026-11-17", k.f, { force: true })).toBe("synced");
+    expect(k.menuCalls()).toBe(2);
   } finally {
     vi.useRealTimers();
   }
