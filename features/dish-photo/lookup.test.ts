@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { photoFor } from "./lookup";
+import { photoFor, photosFor } from "./lookup";
 
 let dir: string;
 beforeEach(async () => {
@@ -100,4 +100,15 @@ test("인증키가 없거나 요청이 실패하면 사진 없이 넘어가고, 
 test("띄어쓰기만 다른 이름은 같은 요리로 본다", async () => {
   const f = db([{ RCP_NM: "소고기 무국", ATT_FILE_NO_MAIN: "http://x/beef.jpg" }]);
   expect(await photoFor("소고기무국", f)).toBe("http://x/beef.jpg");
+});
+
+test("여러 메뉴는 저장한 결과를 한 번에 쓰고, 처음 보는 메뉴만 새로 찾는다", async () => {
+  const log: string[] = [];
+  const f = db([{ RCP_NM: "미역국", ATT_FILE_NO_MAIN: "http://x/s.jpg" }], log);
+  await photoFor("미역국", f);
+  const before = log.length;
+  const result = await photosFor(["미역국", "처음보는요리"], f);
+  expect(result["미역국"]).toBe("http://x/s.jpg");
+  expect(result["처음보는요리"]).toBeNull();
+  expect(log.slice(before).every((q) => q !== "미역국")).toBe(true);
 });

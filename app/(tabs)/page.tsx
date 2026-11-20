@@ -22,7 +22,7 @@ import {
 } from "@/features/today";
 import { loadPlan } from "@/features/today/server";
 import { getFeedbackFor } from "@/features/meal-feedback";
-import { photoFor } from "@/features/dish-photo";
+import { photosFor } from "@/features/dish-photo";
 import { toISODate, weekOf } from "@/lib/date";
 
 import {
@@ -40,19 +40,23 @@ export default async function TodayPage(props: PageProps<"/">) {
   const { d } = await props.searchParams;
   const today = toISODate(new Date());
   const selected = typeof d === "string" && ISO_DATE.test(d) ? d : today;
+  // 키즈노트에서 새 식단을 가져온 뒤에 읽어야 해서 이것만 먼저 기다린다(대개 "방금 가져옴"으로 바로 끝난다).
   await syncDaycareMenus(today);
-  const status = await connectionStatus();
-  const menus = await getMenus(weekOf(selected));
+  // 서로 기다릴 필요가 없는 읽기는 한꺼번에 한다.
+  const [status, menus, plan, feedback] = await Promise.all([
+    connectionStatus(),
+    getMenus(weekOf(selected)),
+    loadPlan(selected),
+    getFeedbackFor(selected),
+  ]);
   const menu = menus[selected] ?? null;
   const kind = dayKind(selected, menu);
-  const plan = await loadPlan(selected);
   const { label, relative, note } = describeDay(selected, today);
 
-  const feedback = await getFeedbackFor(selected);
   const dishNames = [
     ...new Set(Object.values(plan ?? {}).flatMap((m) => m?.dishes.filter((d) => !d.basic).map((d) => d.name) ?? [])),
   ];
-  const photos = Object.fromEntries(await Promise.all(dishNames.map(async (n) => [n, await photoFor(n)] as const)));
+  const photos = await photosFor(dishNames);
   const actions = { swapDish: swapDishAction, swapMeal: swapMealAction, setFeedback: setFeedbackAction };
   const homeMeal = (meal: MealKey, title: string, sub: string) => {
     const data = plan?.[meal];

@@ -22,10 +22,9 @@ export async function syncDaycareMenus(
   f: typeof fetch = fetch,
   { force = false }: { force?: boolean } = {}
 ): Promise<SyncResult> {
-  const session = await getSession();
+  const [session, last] = await Promise.all([getSession(), readStore<number>(LAST_SYNC, 0)]);
   if (!session) return "none";
 
-  const last = await readStore<number>(LAST_SYNC, 0);
   if (Date.now() - last < (force ? FORCE_GAP_MS : RECENT_MS)) return "recent";
 
   const start = weekOf(today)[0];

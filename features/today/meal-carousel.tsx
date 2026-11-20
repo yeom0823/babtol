@@ -40,6 +40,7 @@ export function MealCarousel({ slides, isToday }: { slides: CarouselSlide[]; isT
     if (!el) return;
     el.scrollTo({ left: index * el.clientWidth, behavior: smooth ? "smooth" : "instant" });
     setActive(index);
+    if (!smooth) setHeight(slideEls.current[index]?.scrollHeight);
   }, []);
 
   // 처음 열 때: 오늘이면 지금 시간의 끼니, 다른 날이면 아침부터.
@@ -52,24 +53,32 @@ export function MealCarousel({ slides, isToday }: { slides: CarouselSlide[]; isT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isToday, goTo]);
 
-  // 보고 있는 슬라이드의 높이에 맞춘다. 내용이 바뀌어도 따라간다.
-  useEffect(() => {
-    const el = slideEls.current[active];
-    if (!el) return;
-    const fit = () => setHeight(el.scrollHeight);
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [active, slides]);
+  /**
+   * 높이는 스크롤 위치에서 바로 계산한다. 두 슬라이드 사이를 넘기는 중에는 둘 중 큰 높이를 써서
+   * 넘어오는 카드가 잘리지 않게 하고, 멈추면 그 카드 높이에 맞춘다. 탭 표시도 넘기는 중에 바로 바뀐다.
+   */
+  const fitToScroll = useCallback(() => {
+    const el = scroller.current;
+    if (!el?.clientWidth) return;
+    const pos = el.scrollLeft / el.clientWidth;
+    const heightOf = (i: number) => slideEls.current[i]?.scrollHeight ?? 0;
+    const settled = Math.abs(pos - Math.round(pos)) < 0.02;
+    setHeight(settled ? heightOf(Math.round(pos)) : Math.max(heightOf(Math.floor(pos)), heightOf(Math.ceil(pos))));
+    setActive(Math.round(pos));
+  }, []);
 
-  const scrollTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // 슬라이드 내용(카드 펼침, 메뉴 바꾸기 등)이 바뀌어도 높이를 다시 맞춘다.
+  useEffect(() => {
+    fitToScroll();
+    const observer = new ResizeObserver(fitToScroll);
+    slideEls.current.forEach((el) => el && observer.observe(el));
+    return () => observer.disconnect();
+  }, [slides, fitToScroll]);
+
+  const frame = useRef(0);
   const onScroll = () => {
-    clearTimeout(scrollTimer.current);
-    scrollTimer.current = setTimeout(() => {
-      const el = scroller.current;
-      if (el?.clientWidth) setActive(Math.round(el.scrollLeft / el.clientWidth));
-    }, 60);
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(fitToScroll);
   };
 
   return (
@@ -93,7 +102,7 @@ export function MealCarousel({ slides, isToday }: { slides: CarouselSlide[]; isT
         onScroll={onScroll}
         aria-live="polite"
         style={{ height }}
-        className="-mx-4 flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden overscroll-x-contain transition-[height] duration-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden overscroll-x-contain [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {slides.map((s, i) => (
           <div
@@ -103,7 +112,7 @@ export function MealCarousel({ slides, isToday }: { slides: CarouselSlide[]; isT
             }}
             role="tabpanel"
             aria-label={s.label}
-            className="flex min-w-0 flex-[0_0_100%] snap-center flex-col gap-3 px-4"
+            className="flex min-w-0 flex-[0_0_100%] snap-center snap-always flex-col gap-3 px-4 pb-1.5"
           >
             {s.content}
           </div>

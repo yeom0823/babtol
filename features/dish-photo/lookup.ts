@@ -60,3 +60,12 @@ export async function photoFor(name: string, f: typeof fetch = fetch): Promise<s
   await updateStore<Cache>(KEY, {}, (c) => ({ ...c, [name]: photo }));
   return photo;
 }
+
+/** 여러 메뉴의 사진을 한꺼번에 찾는다. 저장한 결과는 한 번만 읽고, 처음 보는 메뉴만 새로 찾는다. */
+export async function photosFor(names: string[], f: typeof fetch = fetch): Promise<Record<string, string | null>> {
+  const cache = await readStore<Cache>(KEY, {});
+  const entries = await Promise.all(
+    names.map(async (n) => [n, n in cache ? cache[n] : await photoFor(n, f)] as const)
+  );
+  return Object.fromEntries(entries);
+}
