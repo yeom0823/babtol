@@ -130,8 +130,8 @@
 }
 /* ── 시작 화면(밥톨) 애니메이션 ── */
 @keyframes babtol-hop {
-  0% { transform: translateY(46px) scale(1, 0.9); }
-  35% { transform: translateY(-14px) scale(0.96, 1.06); }
+  0% { transform: translateY(30px) scale(1, 0.9); }
+  35% { transform: translateY(-10px) scale(0.95, 1.07); }
   55% { transform: translateY(2px) scale(1.05, 0.95); }
   72% { transform: translateY(-4px) scale(1, 1); }
   100% { transform: translateY(0) scale(1, 1); }
@@ -184,3 +184,27 @@
     animation: none !important;
   }
 }
+@keyframes babtol-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes babtol-wave-l {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-14deg); }
+}
+@keyframes babtol-wave-r {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(14deg); }
+}
+.babtol-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: babtol-twinkle 1.2s ease-in-out infinite both;
+}
+.babtol-wave-l,
+.babtol-wave-r {
+  transform-box: view-box;
+  animation: babtol-wave-l 600ms ease-in-out 600ms infinite;
+}
+.babtol-wave-l { transform-origin: 38px 56px; }
+.babtol-wave-r { transform-origin: 82px 56px; animation-name: babtol-wave-r; }

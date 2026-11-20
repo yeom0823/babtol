@@ -39,12 +39,14 @@ export function SplashScreen() {
         className="babtol-splash fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-background transition-opacity duration-400 data-leaving:opacity-0"
       >
         {/* 은은한 배경 동그라미 */}
-        <div className="pointer-events-none absolute -top-24 -left-20 size-72 rounded-full bg-primary/8" />
-        <div className="pointer-events-none absolute -right-24 -bottom-28 size-80 rounded-full bg-primary/10" />
+        <div className="pointer-events-none absolute -top-20 -left-16 size-56 rounded-full bg-primary/7" />
+        <div className="pointer-events-none absolute -right-20 -bottom-24 size-64 rounded-full bg-primary/9" />
+        <div className="pointer-events-none absolute top-[18%] right-[14%] size-4 rounded-full bg-primary/15" />
+        <div className="pointer-events-none absolute bottom-[22%] left-[16%] size-3 rounded-full bg-primary/15" />
 
         <div className="relative flex flex-col items-center">
           <BabtolMascot />
-          <div className="mt-5 flex items-baseline gap-0.5 text-[40px] leading-none font-bold tracking-tight text-foreground">
+          <div className="mt-3 flex items-baseline gap-0.5 font-[family-name:var(--font-cute)] text-[38px] leading-none text-foreground">
             <span className="babtol-letter" style={{ animationDelay: "520ms" }}>
               밥
             </span>
@@ -52,7 +54,7 @@ export function SplashScreen() {
               톨
             </span>
           </div>
-          <p className="babtol-tagline mt-3 text-sm text-muted-foreground">
+          <p className="babtol-tagline mt-2.5 font-[family-name:var(--font-cute)] text-[15px] text-muted-foreground">
             어린이집 식단에 맞춘 우리 아이 집밥
           </p>
         </div>
@@ -66,55 +68,68 @@ export function SplashScreen() {
   );
 }
 
-/** 밥그릇 위로 튀어 오르는 밥알 한 톨. 김이 모락모락 올라간다. */
+/** 둥근 밥그릇 위로 폴짝 튀어 올라 만세 하는 밥알 한 톨. 김이 모락모락, 반짝이가 반짝. */
 function BabtolMascot() {
+  const rice = "#fffdf6";
+  const line = "#e6d9bf";
+  const ink = "#4a3427";
   return (
-    <svg viewBox="0 0 160 160" className="size-52 overflow-visible" role="img" aria-label="밥톨">
+    <svg viewBox="0 0 120 120" className="size-36 overflow-visible" role="img" aria-label="밥톨">
       {/* 김 */}
-      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="4" className="text-muted-foreground/40">
-        <path className="babtol-steam" style={{ animationDelay: "300ms" }} d="M34 70c-6-8 6-12 0-20" />
-        <path className="babtol-steam" style={{ animationDelay: "650ms" }} d="M126 70c-6-8 6-12 0-20" />
-        <path className="babtol-steam" style={{ animationDelay: "950ms" }} d="M22 84c-5-6 5-9 0-15" />
+      <g fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="3" className="text-muted-foreground/35">
+        <path className="babtol-steam" style={{ animationDelay: "300ms" }} d="M20 58c-4-6 4-9 0-15" />
+        <path className="babtol-steam" style={{ animationDelay: "700ms" }} d="M100 58c-4-6 4-9 0-15" />
+      </g>
+
+      {/* 반짝이 */}
+      <g fill="var(--primary)">
+        <path className="babtol-twinkle" style={{ animationDelay: "700ms" }} d="M96 18l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" />
+        <path className="babtol-twinkle" style={{ animationDelay: "1000ms" }} d="M22 26l1.5 3.5 3.5 1.5-3.5 1.5-1.5 3.5-1.5-3.5-3.5-1.5 3.5-1.5z" />
       </g>
 
       {/* 그림자 */}
-      <ellipse className="babtol-shadow" cx="80" cy="150" rx="46" ry="6" fill="currentColor" opacity="0.08" />
+      <ellipse className="babtol-shadow" cx="60" cy="113" rx="34" ry="4.5" fill="currentColor" opacity="0.08" />
 
-      {/* 밥알(뒤쪽에 깔린 밥) */}
-      <g fill="#fffdf6" stroke="#ece3d0" strokeWidth="2">
-        <ellipse cx="50" cy="98" rx="14" ry="9" transform="rotate(-18 50 98)" />
-        <ellipse cx="110" cy="98" rx="14" ry="9" transform="rotate(18 110 98)" />
-        <ellipse cx="80" cy="96" rx="15" ry="9" />
+      {/* 뒤에 깔린 밥알 */}
+      <g fill={rice} stroke={line} strokeWidth="2">
+        <ellipse cx="38" cy="70" rx="10" ry="7" transform="rotate(-20 38 70)" />
+        <ellipse cx="82" cy="70" rx="10" ry="7" transform="rotate(20 82 70)" />
       </g>
 
-      {/* 주인공 밥톨: 그릇에서 폴짝 */}
+      {/* 주인공 밥톨: 폴짝 뛰어 만세 */}
       <g className="babtol-hop">
-        <ellipse cx="80" cy="62" rx="27" ry="34" fill="#fffdf6" stroke="#e8dcc4" strokeWidth="3" />
+        {/* 팔 */}
+        <g strokeLinecap="round" fill="none">
+          <path className="babtol-wave-l" d="M38 56l-8-9" stroke={line} strokeWidth="9" />
+          <path className="babtol-wave-l" d="M38 56l-8-9" stroke={rice} strokeWidth="5.5" />
+          <path className="babtol-wave-r" d="M82 56l8-9" stroke={line} strokeWidth="9" />
+          <path className="babtol-wave-r" d="M82 56l8-9" stroke={rice} strokeWidth="5.5" />
+        </g>
+        {/* 몸: 통통한 동그라미 */}
+        <ellipse cx="60" cy="48" rx="24" ry="25" fill={rice} stroke={line} strokeWidth="2.5" />
         {/* 윤기 */}
-        <ellipse cx="68" cy="44" rx="6" ry="10" fill="#ffffff" transform="rotate(-20 68 44)" />
+        <ellipse cx="50" cy="35" rx="5" ry="7" fill="#ffffff" transform="rotate(-25 50 35)" />
         {/* 눈 */}
-        <g className="babtol-blink" fill="#3b2a20">
-          <ellipse cx="70" cy="64" rx="3.4" ry="4.4" />
-          <ellipse cx="90" cy="64" rx="3.4" ry="4.4" />
+        <g className="babtol-blink">
+          <circle cx="51.5" cy="48" r="3.4" fill={ink} />
+          <circle cx="68.5" cy="48" r="3.4" fill={ink} />
+          <circle cx="52.6" cy="46.8" r="1.1" fill="#ffffff" />
+          <circle cx="69.6" cy="46.8" r="1.1" fill="#ffffff" />
         </g>
         {/* 볼터치 */}
-        <ellipse cx="62" cy="73" rx="6" ry="3.6" fill="#ffb3a7" opacity="0.8" />
-        <ellipse cx="98" cy="73" rx="6" ry="3.6" fill="#ffb3a7" opacity="0.8" />
-        {/* 웃는 입 */}
-        <path d="M74 74q6 6 12 0" fill="none" stroke="#3b2a20" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="45" cy="55" r="4.5" fill="#ffb4a8" opacity="0.75" />
+        <circle cx="75" cy="55" r="4.5" fill="#ffb4a8" opacity="0.75" />
+        {/* 입: 동글한 ω */}
+        <path d="M55.5 55q2.25 3 4.5 0q2.25 3 4.5 0" fill="none" stroke={ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </g>
 
-      {/* 밥그릇 */}
-      <path d="M22 100h116c0 26-24 46-58 46s-58-20-58-46z" fill="var(--primary)" />
-      <rect x="18" y="94" width="124" height="12" rx="6" fill="var(--primary)" />
-      <rect x="18" y="94" width="124" height="5" rx="2.5" fill="#ffffff" opacity="0.22" />
-      <path d="M62 146h36v6a4 4 0 0 1-4 4H66a4 4 0 0 1-4-4z" fill="var(--primary)" opacity="0.85" />
-      {/* 그릇 무늬 */}
-      <g fill="#ffffff" opacity="0.3">
-        <circle cx="50" cy="122" r="3" />
-        <circle cx="80" cy="128" r="3" />
-        <circle cx="110" cy="122" r="3" />
-      </g>
+      {/* 둥근 밥그릇 */}
+      <path d="M14 72h92c0 20-20 34-46 34S14 92 14 72z" fill="var(--primary)" />
+      <rect x="11" y="66" width="98" height="11" rx="5.5" fill="var(--primary)" />
+      <rect x="15" y="67.5" width="56" height="3.5" rx="1.75" fill="#ffffff" opacity="0.3" />
+      <rect x="47" y="104" width="26" height="7" rx="3.5" fill="var(--primary)" opacity="0.85" />
+      {/* 그릇 무늬: 작은 하트 */}
+      <path d="M60 91c-3-2.6-5-4.4-5-6.3a2.6 2.6 0 0 1 5-1 2.6 2.6 0 0 1 5 1c0 1.9-2 3.7-5 6.3z" fill="#ffffff" opacity="0.55" />
     </svg>
   );
 }

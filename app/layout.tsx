@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Noto_Sans_KR } from "next/font/google";
+import { Geist_Mono, Jua, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import { SplashScreen } from "@/components/splash-screen";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,13 @@ const notoSansKr = Noto_Sans_KR({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
+});
+
+// 시작 화면의 "밥톨" 글자에만 쓰는 둥글고 귀여운 글꼴. 앱 화면은 Noto Sans KR 그대로다.
+const jua = Jua({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-cute",
 });
 
 const geistMono = Geist_Mono({
@@ -25,7 +32,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={cn("h-full", "antialiased", notoSansKr.variable, geistMono.variable, "font-sans")}
+      className={cn("h-full", "antialiased", notoSansKr.variable, jua.variable, geistMono.variable, "font-sans")}
     >
       <body className="flex min-h-full flex-col bg-background text-foreground [word-break:keep-all]">
         <SplashScreen />
