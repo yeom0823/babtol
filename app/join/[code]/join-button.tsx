@@ -15,6 +15,7 @@ export function JoinButton({
     <div className="flex flex-col gap-2">
       <Button
         size="lg"
+        className="h-11 w-full rounded-full text-[15px]"
         disabled={pending}
         onClick={() =>
           startTransition(async () => {

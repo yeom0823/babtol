@@ -14,6 +14,7 @@ export function LogoutButton() {
     <Button
       variant="outline"
       size="sm"
+      className="rounded-full px-4"
       disabled={pending}
       onClick={async () => {
         setPending(true);

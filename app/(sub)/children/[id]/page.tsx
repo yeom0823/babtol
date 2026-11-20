@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { BackLink } from "@/components/back-link";
+import { BrandHero } from "@/components/brand-hero";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { getChild } from "@/features/family/server";
 
 import { deleteChildAction, saveChildAction } from "../actions";
@@ -20,22 +20,24 @@ export default async function ChildPage(props: PageProps<"/children/[id]">) {
   return (
     <>
       <BackLink href="/kid">우리 아이</BackLink>
-      <h1 className="text-[22px] font-bold tracking-tight">{isNew ? "아이 추가" : `${child!.name} 정보`}</h1>
-      <Card>
-        <CardContent>
-          <ChildForm
-            initial={{
-              name: child?.name ?? "",
-              birthMonth: child?.birthMonth?.slice(0, 7) ?? "",
-              allergies: child?.allergies.join(", ") ?? "",
-            }}
-            save={saveChildAction.bind(null, isNew ? null : id)}
-          />
-        </CardContent>
-      </Card>
+      <BrandHero
+        size="sm"
+        title={isNew ? "아이를 알려 주세요" : `${child!.name} 정보`}
+        description="개월 수와 알레르기에 맞춰 집 끼니를 골라요."
+      />
+      <section className="rounded-3xl bg-primary/8 p-5">
+        <ChildForm
+          initial={{
+            name: child?.name ?? "",
+            birthMonth: child?.birthMonth?.slice(0, 7) ?? "",
+            allergies: child?.allergies.join(", ") ?? "",
+          }}
+          save={saveChildAction.bind(null, isNew ? null : id)}
+        />
+      </section>
       {!isNew && (
-        <form action={deleteChildAction.bind(null, id)}>
-          <Button type="submit" variant="ghost" size="sm" className="text-destructive">
+        <form action={deleteChildAction.bind(null, id)} className="flex justify-center">
+          <Button type="submit" variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
             이 아이 정보 지우기
           </Button>
         </form>

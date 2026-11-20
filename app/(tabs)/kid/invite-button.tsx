@@ -35,7 +35,7 @@ export function InviteButton({ create }: { create: () => Promise<string | null> 
 
   return (
     <div className="flex flex-col gap-1.5">
-      <Button variant="outline" size="sm" className="self-start" disabled={pending} onClick={share}>
+      <Button variant="outline" className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/8" disabled={pending} onClick={share}>
         <LinkIcon data-icon="inline-start" />
         {pending ? "만드는 중" : "가족 초대 링크 보내기"}
       </Button>

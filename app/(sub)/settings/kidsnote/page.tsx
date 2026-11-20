@@ -4,7 +4,6 @@ import { connection } from "next/server";
 import { BackLink } from "@/components/back-link";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { lastSyncedAt } from "@/features/daycare-sync";
 import { connectionStatus } from "@/features/kidsnote";
 
@@ -39,8 +38,7 @@ export default async function KidsnoteConnectPage() {
 
       {status === "connected" ? (
         <>
-          <Card>
-            <CardContent className="flex flex-col gap-3">
+          <section className="flex flex-col gap-3 rounded-3xl bg-primary/8 p-5">
               <div className="flex items-center gap-2.5">
                 <span className="grid size-8 flex-none place-items-center rounded-full bg-emerald-600 text-white">
                   <CheckIcon aria-hidden="true" className="size-4" />
@@ -51,12 +49,11 @@ export default async function KidsnoteConnectPage() {
                 </span>
               </div>
               <form action={disconnectAction}>
-                <Button type="submit" variant="outline" size="sm">
+                <Button type="submit" variant="outline" size="sm" className="rounded-full bg-background px-4">
                   연결 끊기
                 </Button>
               </form>
-            </CardContent>
-          </Card>
+          </section>
           <details className="group text-sm">
             <summary className="cursor-pointer text-muted-foreground">다른 키즈노트 계정으로 다시 연결</summary>
             <div className="mt-3">

@@ -12,13 +12,19 @@ export function CreateFamilyForm({
 }) {
   const [state, action, pending] = useActionState(create, null);
   return (
-    <form action={action} className="flex flex-col gap-2">
-      <label htmlFor="family-name" className="text-sm font-semibold">
+    <form action={action} className="flex flex-col gap-2.5">
+      <label htmlFor="family-name" className="sr-only">
         가족 이름
       </label>
-      <Input id="family-name" name="name" defaultValue="우리 집" maxLength={20} />
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "만드는 중" : "가족 만들기"}
+      <Input
+        id="family-name"
+        name="name"
+        defaultValue="우리 집"
+        maxLength={20}
+        className="h-11 rounded-full bg-background px-4 text-base"
+      />
+      <Button type="submit" size="lg" className="h-11 rounded-full text-[15px]" disabled={pending}>
+        {pending ? "만드는 중" : "이 이름으로 가족 만들기"}
       </Button>
       {state?.failed && (
         <p role="alert" className="m-0 text-xs text-destructive">
