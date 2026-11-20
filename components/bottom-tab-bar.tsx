@@ -13,7 +13,7 @@ export function BottomTabBar({ items }: { items: TabItem[] }) {
   return (
     <nav
       aria-label="메뉴"
-      className="sticky bottom-0 z-30 -mx-4 mt-2 grid border-t bg-background/92 px-2 pt-1.5 pb-3 backdrop-blur"
+      className="sticky bottom-0 z-30 -mx-4 mt-2 grid border-t bg-background/92 px-2 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
       style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}
     >
       {items.map((item) => {

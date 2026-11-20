@@ -36,17 +36,21 @@ export function SplashScreen() {
         id={ID}
         aria-hidden="true"
         suppressHydrationWarning
-        className="babtol-splash fixed inset-0 z-[100] grid place-items-center overflow-hidden bg-background transition-opacity duration-400 data-leaving:opacity-0"
+        className="babtol-splash fixed inset-0 z-[100] flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-opacity duration-400 data-leaving:opacity-0"
       >
-        {/* 은은한 배경 동그라미 */}
-        <div className="pointer-events-none absolute -top-20 -left-16 size-56 rounded-full bg-primary/7" />
-        <div className="pointer-events-none absolute -right-20 -bottom-24 size-64 rounded-full bg-primary/9" />
-        <div className="pointer-events-none absolute top-[18%] right-[14%] size-4 rounded-full bg-primary/15" />
-        <div className="pointer-events-none absolute bottom-[22%] left-[16%] size-3 rounded-full bg-primary/15" />
+        {/* 가운데서 은은하게 퍼지는 빛. 가장자리는 앱과 같은 흰색이라 어떤 화면 비율에서도 잘린 띠가 생기지 않는다. */}
+        <div
+          className="pointer-events-none absolute top-1/2 left-1/2 size-[min(120vmin,720px)] -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            background:
+              "radial-gradient(closest-side, color-mix(in oklch, var(--primary) 13%, var(--background)), color-mix(in oklch, var(--primary) 5%, var(--background)) 55%, var(--background))",
+          }}
+        />
 
-        <div className="relative flex flex-col items-center">
+        {/* 크기는 화면 짧은 변(vmin) 기준이라 휴대폰·태블릿·데스크톱에서 같은 비율로 보인다. */}
+        <div className="relative flex flex-col items-center text-[clamp(14px,3.6vmin,22px)]">
           <BabtolMascot />
-          <div className="mt-3 flex items-baseline gap-0.5 font-[family-name:var(--font-cute)] text-[38px] leading-none text-foreground">
+          <div className="mt-[0.4em] flex items-baseline gap-0.5 font-[family-name:var(--font-cute)] text-[2.6em] leading-none text-foreground">
             <span className="babtol-letter" style={{ animationDelay: "520ms" }}>
               밥
             </span>
@@ -54,7 +58,7 @@ export function SplashScreen() {
               톨
             </span>
           </div>
-          <p className="babtol-tagline mt-2.5 font-[family-name:var(--font-cute)] text-[15px] text-muted-foreground">
+          <p className="babtol-tagline mt-[0.7em] font-[family-name:var(--font-cute)] text-[1.05em] text-muted-foreground">
             어린이집 식단에 맞춘 우리 아이 집밥
           </p>
         </div>
@@ -74,7 +78,7 @@ function BabtolMascot() {
   const line = "#e6d9bf";
   const ink = "#4a3427";
   return (
-    <svg viewBox="0 0 120 120" className="size-36 overflow-visible" role="img" aria-label="밥톨">
+    <svg viewBox="0 0 120 120" className="size-[9.5em] overflow-visible" role="img" aria-label="밥톨">
       {/* 김 */}
       <g fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="3" className="text-muted-foreground/35">
         <path className="babtol-steam" style={{ animationDelay: "300ms" }} d="M20 58c-4-6 4-9 0-15" />
