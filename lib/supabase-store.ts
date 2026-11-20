@@ -29,6 +29,12 @@ export function createSupabaseStore({
       return data?.[0]?.value;
     },
     async write(key: string, value: unknown): Promise<void> {
+      // value 칸은 비울 수 없다. null은 "값 없음"이라 행을 지우고, 다시 읽으면 기본값이 나온다.
+      if (value === null || value === undefined) {
+        const { error } = await db.from(TABLE).delete().eq("key", key);
+        if (error) throw new Error(`저장소 지우기 실패: ${error.message}`);
+        return;
+      }
       const { error } = await db
         .from(TABLE)
         .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });

@@ -16,7 +16,17 @@ function fakePostgrest() {
       const body = rows.has(key) ? [{ value: rows.get(key) }] : [];
       return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
     }
+    if (method === "DELETE") {
+      rows.delete(url.searchParams.get("key")?.replace(/^eq./, "") ?? "");
+      return new Response(null, { status: 204 });
+    }
     const payload = JSON.parse(String(init?.body));
+    for (const row of Array.isArray(payload) ? payload : [payload]) {
+      // 실제 표처럼 value가 비어 있으면 거절한다(not null).
+      if (row.value === null) {
+        return new Response(JSON.stringify({ code: "23502", message: "null value in column \"value\" violates not-null constraint" }), { status: 400, headers: { "content-type": "application/json" } });
+      }
+    }
     for (const row of Array.isArray(payload) ? payload : [payload]) rows.set(row.key, row.value);
     return new Response(null, { status: 201 });
   }) as typeof fetch;
@@ -46,4 +56,13 @@ test("app_store 표에 서버 비밀 키로, 같은 키는 덮어쓰기(upsert)�
   expect(post.url.searchParams.get("on_conflict")).toBe("key");
   expect(post.prefer).toContain("resolution=merge-duplicates");
   expect(post.apikey).toBe("sb_secret_test");
+});
+
+test("null을 쓰면 행을 지우고, 다시 읽으면 없음이다 (키즈노트 연결 뒤 대기 정보 비우기)", async () => {
+  const { f, rows } = fakePostgrest();
+  const store = createSupabaseStore(config(f));
+  await store.write("kidsnotePending", { username: "mom" });
+  await store.write("kidsnotePending", null);
+  expect(rows.has("kidsnotePending")).toBe(false);
+  expect(await store.read("kidsnotePending")).toBeUndefined();
 });
