@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { authEnv } from "./env";
 
@@ -27,11 +28,14 @@ export async function createClient() {
   });
 }
 
-/** 서버가 확인한 지금 로그인한 사람. 로그인하지 않았거나 로그인 설정이 없으면 null. */
-export async function currentUser(): Promise<{ id: string; email: string | null } | null> {
+/**
+ * 서버가 확인한 지금 로그인한 사람. 로그인하지 않았거나 로그인 설정이 없으면 null.
+ * 한 요청 안에서 여러 번 불려도(레이아웃, 페이지, 저장소) 한 번만 확인한다.
+ */
+export const currentUser = cache(async (): Promise<{ id: string; email: string | null } | null> => {
   const supabase = await createClient();
   if (!supabase) return null;
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
   return claims?.sub ? { id: claims.sub, email: typeof claims.email === "string" ? claims.email : null } : null;
-}
+});

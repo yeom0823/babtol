@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, currentUser } from "@/lib/supabase/server";
 
 export type Profile = { email: string; displayName: string | null; createdAt: string; updatedAt: string };
 
@@ -6,8 +6,7 @@ export type Profile = { email: string; displayName: string | null; createdAt: st
 export async function getProfile(): Promise<Profile | null> {
   const supabase = await createClient();
   if (!supabase) return null;
-  const { data: claims } = await supabase.auth.getClaims();
-  const id = claims?.claims?.sub;
+  const id = (await currentUser())?.id;
   if (!id) return null;
   const { data } = await supabase
     .from("profiles")
@@ -23,8 +22,7 @@ export async function getProfile(): Promise<Profile | null> {
 export async function updateDisplayName(name: string): Promise<boolean> {
   const supabase = await createClient();
   if (!supabase) return false;
-  const { data: claims } = await supabase.auth.getClaims();
-  const id = claims?.claims?.sub;
+  const id = (await currentUser())?.id;
   if (!id) return false;
   const clean = name.trim().slice(0, 30);
   const { data, error } = await supabase
