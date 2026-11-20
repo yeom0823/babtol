@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGridIcon, ListIcon } from "lucide-react";
+import { LayoutGridIcon, ListIcon, RefreshCwIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -139,6 +139,16 @@ export function HomeMealCard({
               </span>
             ))}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-none text-muted-foreground"
+            disabled={pending}
+            onClick={() => run("all", () => actions.swapMeal(iso, meal))}
+          >
+            {busy === "all" ? <Spinner data-icon="inline-start" /> : <RefreshCwIcon data-icon="inline-start" />}
+            {busy === "all" ? "고르는 중" : SWAP_ALL_LABEL[meal]}
+          </Button>
           <div role="group" aria-label="메뉴 보기 방식" className="flex flex-none rounded-full bg-muted p-0.5">
             {(
               [
@@ -161,16 +171,6 @@ export function HomeMealCard({
               </button>
             ))}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex-none"
-            disabled={pending}
-            onClick={() => run("all", () => actions.swapMeal(iso, meal))}
-          >
-            {busy === "all" ? <Spinner data-icon="inline-start" /> : "🔀"}
-            {busy === "all" ? "고르는 중" : SWAP_ALL_LABEL[meal]}
-          </Button>
         </div>
 
         {layout === "list" ? (
@@ -244,7 +244,8 @@ export function HomeMealCard({
                 run(`dish-${index}`, () => actions.swapDish(iso, meal, index));
               }}
             >
-              🔀 {openedDish.leftover ? "다 먹었어요, 새 국 고르기" : "이것만 다른 메뉴로 바꾸기"}
+              <RefreshCwIcon data-icon="inline-start" />
+              {openedDish.leftover ? "다 먹었어요, 새 국 고르기" : "이것만 다른 메뉴로 바꾸기"}
             </Button>
           )
         }
