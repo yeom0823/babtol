@@ -41,3 +41,35 @@ test("서로 다른 키는 한 파일에 함께 저장된다", async () => {
   const raw = JSON.parse(await readFile(process.env.HOME_MEAL_DATA_FILE!, "utf8"));
   expect(raw).toEqual({ avoid: ["새우"], plans: { x: 1 } });
 });
+
+test("Supabase 접속 정보가 있으면 파일이 아니라 Supabase app_store에 저장한다", async () => {
+  delete process.env.HOME_MEAL_DATA_FILE;
+  process.env.SUPABASE_URL = "https://demo.supabase.co";
+  process.env.SUPABASE_SECRET_KEY = "sb_secret_test";
+  const rows = new Map<string, unknown>();
+  const urls: string[] = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    urls.push(url.pathname);
+    if ((init?.method ?? "GET") === "GET") {
+      const key = url.searchParams.get("key")?.replace(/^eq\./, "") ?? "";
+      return new Response(JSON.stringify(rows.has(key) ? [{ value: rows.get(key) }] : []), {
+        headers: { "content-type": "application/json" },
+      });
+    }
+    const row = JSON.parse(String(init?.body));
+    rows.set(row.key, row.value);
+    return new Response(null, { status: 201 });
+  }) as typeof fetch;
+  try {
+    await updateStore("avoid", [] as string[], (list) => [...list, "메밀"]);
+    expect(await readStore("avoid", [] as string[])).toEqual(["메밀"]);
+    expect(rows.get("avoid")).toEqual(["메밀"]);
+    expect(urls.every((u) => u === "/rest/v1/app_store")).toBe(true);
+  } finally {
+    globalThis.fetch = original;
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SECRET_KEY;
+  }
+});

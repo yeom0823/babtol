@@ -2,15 +2,21 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { dataDir } from "@/lib/data-dir";
+import { createSupabaseStore } from "@/lib/supabase-store";
 
 /**
- * 이 컴퓨터의 JSON 파일 하나에 키별로 저장한다(가정 A1).
- * 아이 정보와 계정 세션이 들어가므로 파일은 git이 무시하는 .data/ 아래에 둔다.
+ * 키별로 값을 저장한다. Supabase 접속 정보(SUPABASE_URL, SUPABASE_SECRET_KEY)가 있으면
+ * Supabase의 app_store 표에, 없으면 이 컴퓨터의 JSON 파일 하나에 저장한다(가정 A1).
+ * 배포 환경은 파일이 서버마다 따로이고 금방 지워져서 Supabase를 써야 데이터가 남는다.
+ * 파일에는 아이 정보와 계정 세션이 들어가므로 git이 무시하는 .data/ 아래에 둔다.
  */
+type Backend = {
+  read(key: string): Promise<unknown>;
+  write(key: string, value: unknown): Promise<void>;
+};
+
 function dataFile(): string {
-  return (
-    process.env.HOME_MEAL_DATA_FILE ?? join(dataDir(), "home-meal.json")
-  );
+  return process.env.HOME_MEAL_DATA_FILE ?? join(dataDir(), "home-meal.json");
 }
 
 async function readAll(): Promise<Record<string, unknown>> {
@@ -22,28 +28,44 @@ async function readAll(): Promise<Record<string, unknown>> {
   }
 }
 
-export async function readStore<T>(key: string, fallback: T): Promise<T> {
-  const all = await readAll();
-  return key in all ? (all[key] as T) : fallback;
-}
-
-// 같은 프로세스 안의 변경은 한 줄로 세워 서로 덮어쓰지 않게 한다.
-let queue: Promise<unknown> = Promise.resolve();
-
-export function updateStore<T>(
-  key: string,
-  fallback: T,
-  update: (current: T) => T
-): Promise<T> {
-  const run = queue.then(async () => {
+const fileBackend: Backend = {
+  async read(key) {
+    return (await readAll())[key];
+  },
+  async write(key, value) {
     const all = await readAll();
-    const next = update(key in all ? (all[key] as T) : fallback);
-    all[key] = next;
+    all[key] = value;
     const file = dataFile();
     await mkdir(dirname(file), { recursive: true });
     const tmp = `${file}.tmp`;
     await writeFile(tmp, JSON.stringify(all, null, 2));
     await rename(tmp, file);
+  },
+};
+
+function backend(): Backend {
+  // 테스트처럼 파일 위치를 직접 정하면 파일을 쓴다.
+  if (process.env.HOME_MEAL_DATA_FILE) return fileBackend;
+  const url = process.env.SUPABASE_URL;
+  const secretKey = process.env.SUPABASE_SECRET_KEY;
+  return url && secretKey ? createSupabaseStore({ url, secretKey }) : fileBackend;
+}
+
+export async function readStore<T>(key: string, fallback: T): Promise<T> {
+  const value = await backend().read(key);
+  return value === undefined ? fallback : (value as T);
+}
+
+// 같은 서버 안의 변경은 한 줄로 세워 서로 덮어쓰지 않게 한다.
+// 서버가 여러 대일 때 같은 키를 동시에 바꾸면 나중 것이 남는다(가족 규모에서는 드물다).
+let queue: Promise<unknown> = Promise.resolve();
+
+export function updateStore<T>(key: string, fallback: T, update: (current: T) => T): Promise<T> {
+  const run = queue.then(async () => {
+    const store = backend();
+    const current = await store.read(key);
+    const next = update(current === undefined ? fallback : (current as T));
+    await store.write(key, next);
     return next;
   });
   queue = run.catch(() => undefined);
