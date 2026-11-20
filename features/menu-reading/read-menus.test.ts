@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import type { JsonModel } from "@/lib/llm";
 
-import { readMenusFromText } from "./read-menus";
+import { readMenusFromImages, readMenusFromText } from "./read-menus";
 
 const OCR = `11월 넷째 주 식단표 (11/23 ~ 11/27)
 11/23(월) | 사과, 우유 | 현미밥, 감자국, 제육볶음, 시금치나물, 배주김치 | 떡
@@ -58,4 +58,26 @@ test("글이 비었거나 모델이 엉뚱한 답을 주면 읽지 못한 것이
   expect(await readMenusFromText("   ", "2026-11-19", async () => ({ days: [] }))).toEqual([]);
   expect(await readMenusFromText("식단", "2026-11-19", async () => "모르겠어요")).toEqual([]);
   expect(await readMenusFromText("식단", "2026-11-19", async () => { throw new Error("busy"); })).toEqual([]);
+});
+
+test("비전 모델이 있으면 사진을 그대로 넘겨 날짜별 메뉴를 읽는다", async () => {
+  let seen: { user: string; images?: Uint8Array[] } | null = null;
+  const vision: JsonModel = async (p) => {
+    seen = p;
+    return { days: [{ date: "2026-11-20", lunch: ["백미밥", "미역국"], morningSnack: ["바나나"], afternoonSnack: [] }] };
+  };
+  const photo = new Uint8Array([1, 2, 3]);
+  const days = await readMenusFromImages([photo], "2026-11-19", vision);
+  expect(seen!.images).toEqual([photo]);
+  expect(seen!.user).toContain("2026-11-19");
+  expect(days).toEqual([
+    { date: "2026-11-20", menu: { morningSnack: ["바나나"], lunch: ["백미밥", "미역국"], afternoonSnack: [] }, unsure: [] },
+  ]);
+});
+
+test("비전 모델이 실패하면 빈 결과가 아니라 오류를 내서 OCR로 넘어갈 수 있게 한다", async () => {
+  const broken: JsonModel = async () => {
+    throw new Error("집 PC 꺼짐");
+  };
+  await expect(readMenusFromImages([new Uint8Array([1])], "2026-11-19", broken)).rejects.toThrow();
 });

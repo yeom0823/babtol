@@ -46,6 +46,15 @@ export async function readMenusFromText(
     // 여러 날의 식단을 한 번에 돌려줘서 답이 길다.
     timeoutMs: 60_000,
   }).catch(() => null);
+  return toDays(raw);
+}
+
+const VISION_SYSTEM = SYSTEM.replace(
+  "사진에서 글자 인식(OCR)으로 뽑은 글을 받아,",
+  "식단표 사진을 직접 보고, 표의 칸(요일·날짜별 열과 끼니별 행)을 따라"
+);
+
+function toDays(raw: unknown): ReadDay[] {
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return [];
   return parsed.data.days
@@ -60,4 +69,25 @@ export async function readMenusFromText(
       unsure: clean(d.unsure),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * 비전 모델(집 PC의 OLLAMA_VISION_MODEL)이 식단표 사진을 직접 본다. 글자만 뽑는 OCR과 달리
+ * 표의 칸 위치를 알아서 월간표도 날짜별로 나눌 수 있다. 실패하면 오류를 그대로 내서
+ * 부른 쪽이 OCR로 넘어가게 한다.
+ */
+export async function readMenusFromImages(
+  images: Uint8Array[],
+  today: string,
+  model: JsonModel
+): Promise<ReadDay[]> {
+  const raw = await model({
+    system: VISION_SYSTEM,
+    user: `기준 날짜(오늘): ${today}
+
+첨부한 어린이집 식단표 사진의 날짜별 메뉴를 모두 읽어 주세요.`,
+    images,
+    timeoutMs: 120_000,
+  });
+  return toDays(raw);
 }
