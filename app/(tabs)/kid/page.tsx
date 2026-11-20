@@ -1,8 +1,11 @@
 import { connection } from "next/server";
 import Link from "next/link";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, UserIcon } from "lucide-react";
 
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LogoutButton } from "@/features/account";
+import { getProfile } from "@/features/account/server";
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { listAvoid } from "@/features/family-settings";
 import { connectionStatus } from "@/features/kidsnote";
@@ -19,9 +22,26 @@ export default async function KidPage() {
   await connection();
   const status = await connectionStatus();
   const avoid = await listAvoid();
+  const profile = await getProfile();
   return (
     <>
-      <h1 className="text-[22px] font-bold tracking-tight">우리 아이</h1>
+      {/* 로그인 상태: 로그아웃이면 로그인 링크만, 로그인이면 내 계정과 로그아웃만 보인다. */}
+      <header className="flex items-center justify-between gap-2">
+        <h1 className="text-[22px] font-bold tracking-tight">우리 아이</h1>
+        {profile ? (
+          <div className="flex items-center gap-1.5">
+            <Link href="/settings" className={buttonVariants({ variant: "ghost", size: "sm" })}>
+              <UserIcon data-icon="inline-start" />
+              {profile.displayName || "내 계정"}
+            </Link>
+            <LogoutButton />
+          </div>
+        ) : (
+          <Link href="/auth/login?next=/kid" className={buttonVariants({ size: "sm" })}>
+            로그인
+          </Link>
+        )}
+      </header>
 
       <section className="flex flex-col gap-2">
         <h2 className="text-[15px] font-bold">아이 정보</h2>
