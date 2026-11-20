@@ -1,6 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import { SettingsIcon } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,8 +25,6 @@ import { getFeedbackFor } from "@/features/meal-feedback";
 import { photoFor } from "@/features/dish-photo";
 import { toISODate, weekOf } from "@/lib/date";
 
-import { STARTED_COOKIE } from "../welcome/started";
-
 import {
   buildPlanAction,
   fillGroupAction,
@@ -41,8 +37,6 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function TodayPage(props: PageProps<"/">) {
   const { d } = await props.searchParams;
-  // 처음 여는 기기는 서비스 소개부터 본다. 날짜를 지정해 들어온 링크는 바로 보여 준다.
-  if (d === undefined && !(await cookies()).has(STARTED_COOKIE)) redirect("/welcome");
   const today = toISODate(new Date());
   const selected = typeof d === "string" && ISO_DATE.test(d) ? d : today;
   await syncDaycareMenus(today);

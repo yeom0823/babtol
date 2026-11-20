@@ -1,7 +1,11 @@
+/** 끼니별 사진 주소. 키즈노트에 올라온 사진만 있고, 없는 끼니는 비운다. */
+export type MenuPhotos = Partial<Record<"morningSnack" | "lunch" | "afternoonSnack", string>>;
+
 export type DayMenu = {
   morningSnack: string[];
   lunch: string[];
   afternoonSnack: string[];
+  photos?: MenuPhotos;
 };
 
 /** 쉼표와 줄바꿈으로 나눈 메뉴 이름 목록. 빈 칸은 버린다. */

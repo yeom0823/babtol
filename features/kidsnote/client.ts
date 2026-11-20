@@ -20,7 +20,23 @@ export type KidsnoteDayMenu = {
   morningSnack: string[];
   lunch: string[];
   afternoonSnack: string[];
+  photos?: Partial<Record<"morningSnack" | "lunch" | "afternoonSnack", string>>;
 };
+
+const isUrl = (v: unknown): v is string => typeof v === "string" && /^https?:\/\//.test(v);
+
+/**
+ * 식단 항목의 사진(*_img). 스펙에는 "원본·큰 사진·240px, 없으면 null"로만 적혀 있어 모양을 모른다.
+ * 주소 문자열이면 그대로, 크기별 객체면 큰 사진 → 원본 → 그 밖의 주소 순으로 고른다.
+ */
+function photoUrl(value: unknown): string | null {
+  if (isUrl(value)) return value;
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  for (const key of ["large", "original"]) if (isUrl(obj[key])) return obj[key];
+  const rest = Object.entries(obj).filter(([k, v]) => isUrl(v) && !/small|thumb|240/i.test(k));
+  return (rest[0]?.[1] as string | undefined) ?? null;
+}
 
 function cookieFrom(res: Response): string {
   return res.headers
@@ -125,10 +141,20 @@ export async function fetchMenus(
     for (const item of body.results ?? []) {
       const lunch = lines(item.lunch);
       if (!lunch.length || typeof item.date_menu !== "string") continue;
+      const photos = Object.fromEntries(
+        (
+          [
+            ["morningSnack", photoUrl(item.morning_snack_img)],
+            ["lunch", photoUrl(item.lunch_img)],
+            ["afternoonSnack", photoUrl(item.afternoon_snack_img)],
+          ] as const
+        ).filter(([, url]) => url)
+      );
       menus[item.date_menu] = {
         morningSnack: lines(item.morning_snack),
         lunch,
         afternoonSnack: lines(item.afternoon_snack),
+        ...(Object.keys(photos).length ? { photos } : {}),
       };
     }
     url = body.next ?? null;

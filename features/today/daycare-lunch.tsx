@@ -45,11 +45,16 @@ export function DaycareLunch({ iso, menu }: { iso: string; menu: StoredMenu | nu
   return (
     <MealSlide who="daycare" title="점심" sub={`${from} 집에서 챙길 건 없어요.`}>
       <Card className="bg-muted ring-0">
-        <CardContent>
+        <CardContent className="flex flex-col gap-3">
+          {menu.photos?.lunch ? (
+            <DaycarePhoto src={menu.photos.lunch} alt="어린이집 점심 사진" className="h-[170px] w-full rounded-[18px]" />
+          ) : (
+            menu.source === "kidsnote" && <p className="m-0 text-xs text-muted-foreground">사진은 아직 안 올라왔어요</p>
+          )}
           <dl className="m-0 flex flex-col gap-2.5 text-sm">
-            <MenuLine term="오전간식" dishes={menu.morningSnack} />
+            <MenuLine term="오전간식" dishes={menu.morningSnack} photo={menu.photos?.morningSnack} />
             <MenuLine term="점심" dishes={menu.lunch} />
-            <MenuLine term="오후간식" dishes={menu.afternoonSnack} />
+            <MenuLine term="오후간식" dishes={menu.afternoonSnack} photo={menu.photos?.afternoonSnack} />
           </dl>
         </CardContent>
       </Card>
@@ -57,12 +62,23 @@ export function DaycareLunch({ iso, menu }: { iso: string; menu: StoredMenu | nu
   );
 }
 
-function MenuLine({ term, dishes }: { term: string; dishes: string[] }) {
+function MenuLine({ term, dishes, photo }: { term: string; dishes: string[]; photo?: string }) {
   if (!dishes.length) return null;
   return (
-    <div className="grid grid-cols-[58px_1fr] gap-2">
+    <div className="grid grid-cols-[58px_1fr_auto] items-start gap-2">
       <dt className="text-[13px] text-muted-foreground">{term}</dt>
       <dd className="m-0">{dishes.join(", ")}</dd>
+      {photo && <DaycarePhoto src={photo} alt={`어린이집 ${term} 사진`} className="size-[46px] rounded-[10px]" />}
     </div>
+  );
+}
+
+/** 키즈노트에 올라온 어린이집 식단 사진. 외부 주소라 next/image를 쓰지 않는다. */
+function DaycarePhoto({ src, alt, className }: { src: string; alt: string; className: string }) {
+  return (
+    <a href={src} target="_blank" rel="noreferrer" className={`block overflow-hidden bg-background ${className}`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" className="size-full object-cover" />
+    </a>
   );
 }

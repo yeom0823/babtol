@@ -102,3 +102,36 @@ test("로그인은 kapi 주소로 JSON {username, password}를 보낸다", async
     body: { username: "u", password: "p" },
   });
 });
+
+test("식단 사진 주소를 끼니별로 가져온다. 크기별 사진이 있으면 큰 사진을 쓴다", async () => {
+  const f = async () =>
+    json({
+      results: [
+        {
+          date_menu: "2026-11-20",
+          morning_snack: "바나나",
+          lunch: "백미밥\n미역국",
+          afternoon_snack: "생일케이크",
+          morning_snack_img: null,
+          lunch_img: {
+            original: "https://img.example/o.jpg",
+            large: "https://img.example/l.jpg",
+            small: "https://img.example/s.jpg",
+          },
+          afternoon_snack_img: "https://img.example/cake.jpg",
+        },
+      ],
+    });
+  const menus = await fetchMenus("c=1", "123", "2026-11-20", "2026-11-20", f as typeof fetch);
+  expect(menus["2026-11-20"].photos).toEqual({
+    lunch: "https://img.example/l.jpg",
+    afternoonSnack: "https://img.example/cake.jpg",
+  });
+});
+
+test("사진이 하나도 없는 날은 사진 항목이 없다", async () => {
+  const f = async () =>
+    json({ results: [{ date_menu: "2026-11-21", lunch: "잡곡밥", lunch_img: null }] });
+  const menus = await fetchMenus("c=1", "123", "2026-11-21", "2026-11-21", f as typeof fetch);
+  expect(menus["2026-11-21"].photos).toBeUndefined();
+});
