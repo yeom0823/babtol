@@ -128,3 +128,59 @@
     @apply font-sans;
   }
 }
+/* ── 시작 화면(밥톨) 애니메이션 ── */
+@keyframes babtol-hop {
+  0% { transform: translateY(46px) scale(1, 0.9); }
+  35% { transform: translateY(-14px) scale(0.96, 1.06); }
+  55% { transform: translateY(2px) scale(1.05, 0.95); }
+  72% { transform: translateY(-4px) scale(1, 1); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes babtol-shadow {
+  0% { transform: scaleX(0.7); opacity: 0.04; }
+  35% { transform: scaleX(0.85); opacity: 0.05; }
+  100% { transform: scaleX(1); opacity: 0.08; }
+}
+@keyframes babtol-steam {
+  0% { opacity: 0; transform: translateY(10px); }
+  40% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-14px); }
+}
+@keyframes babtol-blink {
+  0%, 86%, 100% { transform: scaleY(1); }
+  92% { transform: scaleY(0.1); }
+}
+@keyframes babtol-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.babtol-hop {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: babtol-hop 900ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.babtol-shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: babtol-shadow 900ms ease-out both;
+}
+.babtol-steam {
+  animation: babtol-steam 1.4s ease-out infinite both;
+}
+.babtol-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: babtol-blink 1.6s ease-in-out 700ms infinite;
+}
+.babtol-letter {
+  display: inline-block;
+  animation: babtol-rise 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+.babtol-tagline {
+  animation: babtol-rise 420ms ease-out 760ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .babtol-splash * {
+    animation: none !important;
+  }
+}
