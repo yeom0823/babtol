@@ -5,8 +5,8 @@ import { ModelBusyError, gatewayModel, type JsonModel } from "@/lib/llm";
 import { mainIngredientsOf } from "./food-groups";
 import { dayCoverage } from "./day-coverage";
 import { MEAL_KO, SYSTEM, buildPrompt, mealsFor, type PlanInput } from "./prompt";
-import { mealSchema } from "./schema";
-import type { DayPlan, MealKey } from "./types";
+import { dishSchema, mealSchema } from "./schema";
+import type { DayPlan, HomeDish, MealKey } from "./types";
 import { findViolations } from "./violations";
 
 export { gatewayModel };
@@ -36,7 +36,8 @@ async function generateMeals(
   meals: MealKey[],
   model: PlanModel,
   keep?: DayPlan,
-  hint?: string
+  hint?: string,
+  timeoutMs?: number
 ): Promise<DayPlan> {
   const schema = z.object(Object.fromEntries(meals.map((m) => [m, mealSchema])));
   const ctx = {
@@ -57,7 +58,7 @@ async function generateMeals(
     const t0 = Date.now();
     let raw: unknown = null;
     try {
-      raw = await model({ system: SYSTEM, user: buildPrompt(input, meals, feedback, keepNames, hint) });
+      raw = await model({ system: SYSTEM, user: buildPrompt(input, meals, feedback, keepNames, hint), timeoutMs });
     } catch (e) {
       // 한도에 걸리면 1분 동안은 다시 불러도 실패만 쌓인다. 남은 시도를 쓰지 않고 바로 멈춘다.
       if (e instanceof ModelBusyError) {
@@ -111,7 +112,83 @@ export async function regenerateMeal(
   hint?: string
 ): Promise<DayPlan> {
   const others = Object.fromEntries(Object.entries(current).filter(([m]) => m !== meal)) as DayPlan;
-  const made = await generateMeals(input, [meal], model, others, hint);
+  const made = await generateMeals(input, [meal], model, others, hint, SINGLE_TIMEOUT_MS);
   return { ...current, ...made };
+}
+
+/**
+ * 끼니 하나나 메뉴 하나는 답이 짧아 정상이면 몇 초 안에 온다. 무료 모델이 가끔 응답 없이 멈추므로
+ * 하루치(20초)보다 짧게 끊고 다시 받는다.
+ */
+const SINGLE_TIMEOUT_MS = 12_000;
+
+const DISH_FORMAT = `[이번 답의 형식] 끼니 전체가 아니라 바꿀 메뉴 하나만, 아래처럼 dish 키 하나로 답합니다.
+{"dish":{"name":"달걀찜","groups":["고기·생선·달걀·콩"],"mainIngredients":["달걀"],"recipe":{"minutes":12,"servings":2,"ingredients":[{"name":"달걀","amount":"2개"},{"name":"물","amount":"100ml"}],"steps":["달걀과 물을 섞어 체에 걸러요.","전자레인지에 1분씩 끊어 3번 익혀요."],"kidNote":"소금 없이도 괜찮아요. 충분히 식혀 주세요."}}}`;
+
+/**
+ * 이것만 바꾸기: 끼니 전체가 아니라 그 자리에 넣을 메뉴 하나만 받는다. 답이 짧아 빠르고,
+ * 끼니 구성(저녁 한 상) 규칙에 걸려 다시 받는 일이 없다. 같은 끼니에 이미 있는 메뉴이거나
+ * 겹침·피할 음식·쉬는 메뉴·아이 안전 규칙을 어기면 다시 받는다.
+ */
+export async function generateDish(
+  input: PlanInput,
+  meal: MealKey,
+  current: DayPlan,
+  index: number,
+  model: PlanModel = gatewayModel
+): Promise<HomeDish> {
+  const home = current[meal];
+  const target = home?.dishes[index];
+  if (!home || !target) throw new PlanError("바꿀 메뉴를 찾지 못했어요");
+  const oldNames = home.dishes.map((d) => d.name);
+  const others = oldNames.filter((_, i) => i !== index);
+  const keepNames = Object.fromEntries(
+    Object.entries(current).map(([m, v]) => [m, v!.dishes.map((d) => d.name)])
+  );
+  const hint = `${MEAL_KO[meal]}의 "${target.name}" 대신 같은 자리(국은 국, 반찬은 반찬)에 넣을 다른 메뉴 하나를 골라 주세요. 나머지(${others.join(", ") || "없음"})는 그대로 둡니다.`;
+  const ctx = {
+    daycareIngredients: mainIngredientsOf(daycareText(input)),
+    avoid: input.avoid,
+    resting: input.resting,
+  };
+  const schema = z.object({ dish: dishSchema });
+
+  let feedback: string[] = [];
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const t0 = Date.now();
+    let raw: unknown = null;
+    try {
+      raw = await model({
+        system: SYSTEM,
+        user: `${buildPrompt(input, [meal], feedback, keepNames, hint)}\n\n${DISH_FORMAT}`,
+        timeoutMs: SINGLE_TIMEOUT_MS,
+      });
+    } catch (e) {
+      if (e instanceof ModelBusyError) throw new PlanBusyError("지금 AI 사용량이 많아요");
+      console.info(`[meal-plan] dish attempt ${attempt} call error:`, e instanceof Error ? e.message : e);
+    }
+    const parsed = schema.safeParse(raw);
+    console.info(`[meal-plan] dish attempt ${attempt} ${meal} ${Date.now() - t0}ms ${parsed.success ? "parsed" : "invalid"}`);
+    if (!parsed.success) {
+      feedback = ['형식이 달랐어요. {"dish": {...}} 하나로 답해 주세요.'];
+      continue;
+    }
+    const dish = parsed.data.dish as HomeDish;
+    if (oldNames.includes(dish.name)) {
+      feedback = [`${dish.name}은(는) 이미 이 끼니에 있어요. 다른 메뉴로 골라 주세요.`];
+      continue;
+    }
+    const composed = { ...home, dishes: home.dishes.map((d, i) => (i === index ? dish : d)) };
+    const hard = findViolations({ [meal]: composed }, ctx)
+      .filter((v) => v.dish === dish.name)
+      .map((v) => `${dish.name}: ${v.detail}`);
+    if (hard.length) {
+      console.info(`[meal-plan] dish attempt ${attempt} violations:`, hard.join(" | "));
+      feedback = hard;
+      continue;
+    }
+    return dish;
+  }
+  throw new PlanError("다른 메뉴를 찾지 못했어요");
 }
 

@@ -23,7 +23,7 @@ function normalizeDish(raw: unknown): unknown {
   return dish;
 }
 
-const dishSchema = z.preprocess(
+export const dishSchema = z.preprocess(
   normalizeDish,
   z.object({
     name: z.string().min(1),

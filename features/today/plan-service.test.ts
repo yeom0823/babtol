@@ -100,15 +100,38 @@ test("다른 아침 보기는 아침만 바꾸고 나머지 끼니는 그대로 
 test("이것만 바꾸기는 그 메뉴 하나만 바꾼다 (AC6)", async () => {
   const dinner = meal(dish("밥", ["쌀"]), dish("소고기무국", ["소고기", "무"]), dish("애호박전", ["달걀", "애호박"]), dish("무나물", ["무"]));
   dinner.dishes[0].basic = true;
-  const { model } = countingModel((n) =>
-    n === 1
-      ? { ...fullPlan(), dinner }
-      : { dinner: meal(dish("밥", ["쌀"]), dish("미역국", ["미역"]), dish("달걀찜", ["달걀"]), dish("무나물", ["무"])) }
-  );
+  // 끼니 전체가 아니라 바꿀 메뉴 하나만 받는다(답이 짧아 빠르고, 저녁 구성 규칙에 걸리지 않는다).
+  const asked: { user: string; timeoutMs?: number }[] = [];
+  let n = 0;
+  const model: PlanModel = async (p) => {
+    asked.push(p);
+    return n++ === 0 ? { ...fullPlan(), dinner } : { dish: dish("미역국", ["미역"]) };
+  };
   await buildPlan("2026-11-17", model);
   await swapDish("2026-11-17", "dinner", 1, model);
   const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
   expect(names).toEqual(["밥", "미역국", "애호박전", "무나물"]);
+  expect(asked[1].user).toContain("소고기무국");
+  expect(asked[1].timeoutMs).toBe(12_000);
+});
+
+test("이것만 바꾸기에서 같은 메뉴나 규칙을 어긴 메뉴가 오면 다시 받는다", async () => {
+  const dinner = meal(dish("밥", ["쌀"]), dish("소고기무국", ["소고기", "무"]), dish("애호박전", ["달걀", "애호박"]), dish("무나물", ["무"]));
+  dinner.dishes[0].basic = true;
+  await addAvoid("땅콩");
+  let n = 0;
+  const model: PlanModel = async () => {
+    n++;
+    if (n === 1) return { ...fullPlan(), dinner };
+    if (n === 2) return { dish: dish("애호박전", ["달걀", "애호박"]) }; // 이미 있는 메뉴
+    if (n === 3) return { dish: dish("땅콩조림", ["땅콩"]) }; // 피할 음식
+    return { dish: dish("달걀찜", ["달걀"]) };
+  };
+  await buildPlan("2026-11-17", model);
+  await swapDish("2026-11-17", "dinner", 3, model);
+  const names = (await loadPlan("2026-11-17"))!.dinner!.dishes.map((d) => d.name);
+  expect(names).toEqual(["밥", "소고기무국", "애호박전", "달걀찜"]);
+  expect(n).toBe(4);
 });
 
 test("빈 식품군 채우기는 그 식품군이 들어간 끼니로 바꾼다 (AC13)", async () => {

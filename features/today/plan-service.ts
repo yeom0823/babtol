@@ -14,6 +14,7 @@ import {
   findDishByName,
   gatewayModel,
   generateDayPlan,
+  generateDish,
   getPlan,
   keepDish,
   placeDish,
@@ -86,21 +87,11 @@ export async function swapDish(
   model: PlanModel = gatewayModel
 ) {
   const plan = await current(iso);
-  const old = plan[meal]!.dishes;
-  const target = old[index];
-  if (!target) throw new PlanError("바꿀 메뉴를 찾지 못했어요");
-  const others = old.filter((_, i) => i !== index).map((d) => d.name);
-  const hint = `"${target.name}"만 다른 메뉴 하나로 바꾸고 나머지(${others.join(", ")})는 그대로 두세요. 같은 자리(국은 국, 반찬은 반찬)의 메뉴로 바꿔 주세요.`;
-  const made = await regenerateMeal(await inputFor(iso), meal, plan, model, hint);
-  const oldNames = old.map((d) => d.name);
-  const fresh = made[meal]!.dishes;
-  const replacement =
-    fresh[index] && !oldNames.includes(fresh[index].name)
-      ? fresh[index]
-      : fresh.find((d) => !oldNames.includes(d.name));
-  if (!replacement) throw new PlanError("다른 메뉴를 찾지 못했어요");
-  const dishes = old.map((d, i) => (i === index ? replacement : d));
-  await savePlan(iso, { ...plan, [meal]: { ...plan[meal]!, dishes } });
+  const home = plan[meal];
+  if (!home?.dishes[index]) throw new PlanError("바꿀 메뉴를 찾지 못했어요");
+  const replacement = await generateDish(await inputFor(iso), meal, plan, index, model);
+  const dishes = home.dishes.map((d, i) => (i === index ? replacement : d));
+  await savePlan(iso, { ...plan, [meal]: { ...home, dishes } });
 }
 
 const FILL_MEAL: Record<FoodGroup, MealKey> = {
