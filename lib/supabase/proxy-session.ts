@@ -3,12 +3,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { authEnv } from "./env";
 
-/** 로그인해야만 들어갈 수 있는 주소. 지금은 내 계정(/settings)만 막는다. */
-const PROTECTED = ["/settings"];
+/** 로그인 없이 들어갈 수 있는 주소. 데이터가 가족별로 나뉘어 나머지는 모두 로그인해야 한다. */
+const PUBLIC = ["/auth"];
 
 /**
- * 요청마다 Supabase 세션 쿠키를 갱신한다(Supabase UI Library 블록의 updateSession 기준).
- * 블록은 로그인하지 않은 모든 요청을 막지만, 여기서는 PROTECTED 주소만 로그인 화면으로 보낸다.
+ * 요청마다 Supabase 세션 쿠키를 갱신하고(Supabase UI Library 블록의 updateSession 기준),
+ * 로그인하지 않은 요청은 원래 가려던 주소를 next에 담아 로그인 화면으로 보낸다.
  */
 export async function updateSession(request: NextRequest) {
   const env = authEnv();
@@ -33,10 +33,12 @@ export async function updateSession(request: NextRequest) {
   const signedIn = Boolean(data?.claims);
 
   const path = request.nextUrl.pathname;
-  if (!signedIn && PROTECTED.some((p) => path === p || path.startsWith(`${p}/`)) && !path.startsWith("/settings/kidsnote")) {
+  if (!signedIn && !PUBLIC.some((p) => path === p || path.startsWith(`${p}/`))) {
+    // API 요청은 화면 이동 대신 401로 답한다.
+    if (path.startsWith("/api/")) return NextResponse.json({ error: "로그인이 필요해요" }, { status: 401 });
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
-    url.search = `?next=${encodeURIComponent(path)}`;
+    url.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(url);
   }
 

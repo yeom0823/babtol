@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-import { readStore, updateStore } from "@/lib/local-store";
+import { readStore, runWithScope, updateStore } from "@/lib/local-store";
 
 let dir: string;
 beforeEach(async () => {
@@ -53,23 +53,31 @@ test("Supabase 접속 정보가 있으면 파일이 아니라 Supabase app_store
     const url = new URL(input instanceof Request ? input.url : String(input));
     urls.push(url.pathname);
     if ((init?.method ?? "GET") === "GET") {
-      const key = url.searchParams.get("key")?.replace(/^eq\./, "") ?? "";
+      const key = `${url.searchParams.get("scope")?.replace(/^eq\./, "")}|${url.searchParams.get("key")?.replace(/^eq\./, "")}`;
       return new Response(JSON.stringify(rows.has(key) ? [{ value: rows.get(key) }] : []), {
         headers: { "content-type": "application/json" },
       });
     }
     const row = JSON.parse(String(init?.body));
-    rows.set(row.key, row.value);
+    rows.set(`${row.scope}|${row.key}`, row.value);
     return new Response(null, { status: 201 });
   }) as typeof fetch;
   try {
-    await updateStore("avoid", [] as string[], (list) => [...list, "메밀"]);
-    expect(await readStore("avoid", [] as string[])).toEqual(["메밀"]);
-    expect(rows.get("avoid")).toEqual(["메밀"]);
+    await runWithScope("fam-a", () => updateStore("avoid", [] as string[], (list) => [...list, "메밀"]));
+    expect(await runWithScope("fam-a", () => readStore("avoid", [] as string[]))).toEqual(["메밀"]);
+    expect(rows.get("fam-a|avoid")).toEqual(["메밀"]);
     expect(urls.every((u) => u === "/rest/v1/app_store")).toBe(true);
   } finally {
     globalThis.fetch = original;
     delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SECRET_KEY;
   }
+});
+
+test("가족마다 따로 저장하고, 메뉴 사진 캐시처럼 공용 값은 함께 쓴다", async () => {
+  await runWithScope("fam-a", () => updateStore("avoid", [] as string[], () => ["새우"]));
+  expect(await runWithScope("fam-b", () => readStore("avoid", [] as string[]))).toEqual([]);
+  expect(await runWithScope("fam-a", () => readStore("avoid", [] as string[]))).toEqual(["새우"]);
+  await runWithScope("fam-a", () => updateStore("dishPhotos:v3", {} as Record<string, string>, () => ({ 미음: "x" })));
+  expect(await runWithScope("fam-b", () => readStore("dishPhotos:v3", {}))).toEqual({ 미음: "x" });
 });

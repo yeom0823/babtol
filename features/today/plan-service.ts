@@ -1,4 +1,5 @@
 import { getMenu } from "@/features/daycare-menu/server";
+import { describeKids, listChildren } from "@/features/family/server";
 import { listAvoid } from "@/features/family-settings";
 import { favoriteNamesFor, restingNamesFor } from "@/features/meal-feedback";
 import {
@@ -28,12 +29,15 @@ import { dayKind } from "./day-kind";
 async function inputFor(iso: string): Promise<PlanInput> {
   const menu = await getMenu(iso);
   const kind = dayKind(iso, menu);
+  const kids = await listChildren();
   return {
     date: iso,
     kind,
     // 쉬는 날은 어린이집 식단을 쓰지 않는다.
     daycare: kind === "off" ? null : menu,
-    avoid: await listAvoid(),
+    // 가족 공통 피할 음식과 아이별 알레르기를 함께 뺀다.
+    avoid: [...new Set([...(await listAvoid()), ...kids.flatMap((k) => k.allergies)])],
+    kids: describeKids(kids, iso),
     resting: await restingNamesFor(iso),
     favorites: await favoriteNamesFor(iso),
   };

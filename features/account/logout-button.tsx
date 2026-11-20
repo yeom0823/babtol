@@ -18,7 +18,7 @@ export function LogoutButton() {
       onClick={async () => {
         setPending(true);
         await createClient()?.auth.signOut();
-        router.replace("/kid");
+        router.replace("/auth/login");
         router.refresh();
       }}
     >

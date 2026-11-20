@@ -1,4 +1,5 @@
 import { BottomTabBar, type TabItem } from "@/components/bottom-tab-bar";
+import { requireFamily } from "@/lib/current-family";
 
 const TABS: TabItem[] = [
   { href: "/", label: "오늘", icon: "🍚" },
@@ -7,7 +8,8 @@ const TABS: TabItem[] = [
   { href: "/kid", label: "우리 아이", icon: "👶" },
 ];
 
-export default function TabsLayout({ children }: LayoutProps<"/">) {
+export default async function TabsLayout({ children }: LayoutProps<"/">) {
+  await requireFamily();
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 py-4">{children}</div>

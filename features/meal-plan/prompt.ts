@@ -11,6 +11,8 @@ export type PlanInput = {
   resting: string[];
   /** 잘 먹은 메뉴(우선 후보). */
   favorites: string[];
+  /** 아이 이름과 개월 수(예: 지우(26개월)). 등록한 아이가 없으면 없음. */
+  kids?: string | null;
 };
 
 export const MEAL_KO: Record<MealKey, string> = {
@@ -70,6 +72,7 @@ export function buildPrompt(
         : "어린이집 식단을 모릅니다. 집 끼니만으로 다섯 식품군을 채우세요."
   );
   parts.push(`추천할 끼니: ${meals.map((m) => MEAL_KO[m]).join(", ")}`);
+  if (input.kids) parts.push(`아이: ${input.kids}. 메뉴, 레시피, kidNote는 가장 어린 아이가 먹을 수 있게 맞춥니다.`);
   if (input.avoid.length) parts.push(`절대 쓰지 말 재료(피할 음식): ${input.avoid.join(", ")}`);
   if (input.resting.length) parts.push(`추천하지 말 메뉴(잠깐 쉬는 메뉴): ${input.resting.join(", ")}`);
   if (input.favorites.length) parts.push(`아이가 잘 먹은 메뉴(가능하면 우선): ${input.favorites.join(", ")}`);
